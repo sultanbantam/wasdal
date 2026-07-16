@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from functools import lru_cache
 
 from pydantic import Field
@@ -28,7 +29,20 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60 * 8
     auto_create_tables: bool = Field(default=True, validation_alias="AUTO_CREATE_TABLES")
     seed_database: bool = Field(default=True, validation_alias="SEED_DATABASE")
-    cors_origins: list[str] = ["http://localhost:3000", "http://frontend:3000"]
+    cors_origins_raw: str = Field(
+        default="http://localhost:3000,http://localhost:3001,http://frontend:3000",
+        validation_alias="CORS_ORIGINS",
+    )
+
+    @property
+    def cors_origins(self) -> list[str]:
+        try:
+            parsed = json.loads(self.cors_origins_raw)
+            if isinstance(parsed, list):
+                return [str(item).strip() for item in parsed if str(item).strip()]
+        except json.JSONDecodeError:
+            pass
+        return [origin.strip() for origin in self.cors_origins_raw.split(",") if origin.strip()]
 
 
 @lru_cache
