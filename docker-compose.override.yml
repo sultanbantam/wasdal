@@ -1,0 +1,6 @@
+services:
+  minio:
+    image: minio/minio:latest
+
+  createbuckets:
+    image: minio/mc:latest

@@ -1,0 +1,510 @@
+"use client";
+
+import dynamic from "next/dynamic";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  BarChart3,
+  BellRing,
+  Bot,
+  CalendarClock,
+  CheckCircle2,
+  ChevronRight,
+  ClipboardList,
+  FileText,
+  Filter,
+  Gauge,
+  Layers,
+  ListChecks,
+  MapPinned,
+  Moon,
+  Plus,
+  Search,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  Sun,
+  UsersRound
+} from "lucide-react";
+import { getCases, getDashboard, runIntake } from "@/lib/api";
+import { formatNumber, priorityTone } from "@/lib/utils";
+import type { CaseItem, DashboardData, IntakeResult } from "@/types/wasdal";
+import { Badge, Button, Panel, ProgressBar, SectionTitle } from "@/components/ui";
+
+const TacticalMap = dynamic(() => import("@/components/tactical-map").then((mod) => mod.TacticalMap), {
+  ssr: false,
+  loading: () => <div className="h-[360px] rounded-lg border border-border bg-muted" />
+});
+
+type ModuleKey = "dashboard" | "cases" | "intake" | "meeting" | "knowledge";
+
+const modules: Array<{ key: ModuleKey; label: string; icon: typeof Gauge }> = [
+  { key: "dashboard", label: "Command Center", icon: Gauge },
+  { key: "cases", label: "Case Board", icon: ClipboardList },
+  { key: "intake", label: "AI Intake", icon: Sparkles },
+  { key: "meeting", label: "Meeting Mode", icon: UsersRound },
+  { key: "knowledge", label: "Knowledge", icon: Layers }
+];
+
+export function CommandCenter() {
+  const [active, setActive] = useState<ModuleKey>("dashboard");
+  const [dark, setDark] = useState(false);
+  const dashboardQuery = useQuery({ queryKey: ["dashboard"], queryFn: getDashboard });
+  const casesQuery = useQuery({ queryKey: ["cases"], queryFn: getCases });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+  }, [dark]);
+
+  const dashboard = dashboardQuery.data;
+  const cases = casesQuery.data ?? [];
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur">
+        <div className="flex min-h-16 items-center justify-between gap-3 px-4 lg:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-white">
+              <ShieldCheck size={20} />
+            </div>
+            <div className="min-w-0">
+              <h1 className="truncate text-lg font-semibold">Wasdal</h1>
+              <p className="truncate text-xs text-muted-foreground">Copilot untuk Bagian Ekbang</p>
+            </div>
+          </div>
+          <div className="hidden max-w-xl flex-1 items-center rounded-md border border-border bg-white px-3 py-2 dark:bg-[#111827] md:flex">
+            <Search size={16} className="text-muted-foreground" />
+            <input className="ml-2 w-full bg-transparent text-sm outline-none" placeholder="Cari kasus, OPD, lokasi, atau keputusan" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" className="h-9 w-9 px-0" title="Notifikasi">
+              <BellRing size={17} />
+            </Button>
+            <Button variant="ghost" className="h-9 w-9 px-0" title="Tema" onClick={() => setDark((value) => !value)}>
+              {dark ? <Sun size={17} /> : <Moon size={17} />}
+            </Button>
+            <Button variant="primary" onClick={() => setActive("intake")}>
+              <Plus size={16} />
+              Intake
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex">
+        <aside className="hidden w-64 shrink-0 border-r border-border p-4 lg:block">
+          <nav className="space-y-1">
+            {modules.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.key}
+                  onClick={() => setActive(item.key)}
+                  className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition ${
+                    active === item.key ? "bg-primary text-white" : "hover:bg-muted"
+                  }`}
+                >
+                  <Icon size={17} />
+                  {item.label}
+                </button>
+              );
+            })}
+          </nav>
+          <Panel className="mt-6">
+            <SectionTitle title="AI Guardrails" meta="Rekomendasi tidak menutup kasus" />
+            <div className="space-y-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={14} className="text-success" />
+                Human approval
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={14} className="text-success" />
+                Confidence score
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={14} className="text-success" />
+                Audit trail
+              </div>
+            </div>
+          </Panel>
+        </aside>
+
+        <main className="min-w-0 flex-1 p-4 lg:p-6">
+          <div className="mb-4 grid grid-cols-2 gap-2 lg:hidden">
+            {modules.map((item) => (
+              <Button key={item.key} variant={active === item.key ? "primary" : "ghost"} onClick={() => setActive(item.key)}>
+                <item.icon size={16} />
+                {item.label}
+              </Button>
+            ))}
+          </div>
+          {active === "dashboard" && dashboard ? <DashboardView dashboard={dashboard} cases={cases} /> : null}
+          {active === "cases" ? <CasesView cases={cases} /> : null}
+          {active === "intake" ? <IntakeView /> : null}
+          {active === "meeting" ? <MeetingView cases={cases} /> : null}
+          {active === "knowledge" ? <KnowledgeView /> : null}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function DashboardView({ dashboard, cases }: { dashboard: DashboardData; cases: CaseItem[] }) {
+  return (
+    <div className="space-y-4">
+      <MetricGrid metrics={dashboard.metrics} />
+      <div className="grid gap-4 xl:grid-cols-[1.35fr_0.65fr]">
+        <Panel>
+          <SectionTitle title="Peta Kasus" meta="Sebaran lokasi dan tingkat prioritas">
+            <Button variant="ghost">
+              <Filter size={16} />
+              Filter
+            </Button>
+          </SectionTitle>
+          <TacticalMap points={dashboard.map_points} />
+        </Panel>
+        <Panel>
+          <SectionTitle title="Copilot Ekbang" meta="Brief untuk rapat dan eskalasi" />
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm leading-6">{dashboard.executive_brief}</div>
+          <div className="mt-4 space-y-3">
+            {dashboard.ai_watchlist.map((item) => (
+              <div key={String(item.number)} className="rounded-md border border-border p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">{String(item.number)}</span>
+                  <Badge className={priorityTone(String(item.priority))}>{String(item.priority)}</Badge>
+                </div>
+                <div className="mt-2 text-sm font-medium">{String(item.title)}</div>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">{String(item.risk)}</p>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      </div>
+      <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+        <Panel>
+          <SectionTitle title="Analitik Kasus" meta="Status, kategori, dan prioritas" />
+          <DistributionBars data={dashboard.cases_by_status} tone="primary" />
+          <div className="mt-5">
+            <DistributionBars data={dashboard.cases_by_category} tone="secondary" compact />
+          </div>
+        </Panel>
+        <Panel>
+          <SectionTitle title="Daftar Prioritas" meta="Urutan risiko tertinggi" />
+          <CaseTable cases={cases.slice(0, 5)} />
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
+function MetricGrid({ metrics }: { metrics: DashboardData["metrics"] }) {
+  const toneClass = {
+    neutral: "text-secondary",
+    warning: "text-warning",
+    danger: "text-danger",
+    success: "text-success"
+  };
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      {metrics.map((metric) => (
+        <Panel key={metric.label} className="min-h-[116px]">
+          <p className="text-xs font-medium text-muted-foreground">{metric.label}</p>
+          <div className="mt-3 flex items-end justify-between gap-3">
+            <div className="text-3xl font-semibold">{formatNumber(metric.value)}</div>
+            <BarChart3 size={22} className={toneClass[metric.tone]} />
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">{metric.delta}</p>
+        </Panel>
+      ))}
+    </div>
+  );
+}
+
+function DistributionBars({ data, tone, compact = false }: { data: Record<string, number>; tone: "primary" | "secondary"; compact?: boolean }) {
+  const max = Math.max(...Object.values(data), 1);
+  return (
+    <div className={compact ? "grid gap-2 sm:grid-cols-2" : "space-y-3"}>
+      {Object.entries(data).map(([label, value]) => (
+        <div key={label} className="min-w-0">
+          <div className="mb-1 flex items-center justify-between gap-2 text-xs">
+            <span className="truncate text-muted-foreground">{label}</span>
+            <span className="font-medium">{value}</span>
+          </div>
+          <ProgressBar value={(value / max) * 100} tone={tone} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CaseTable({ cases }: { cases: CaseItem[] }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[720px] border-separate border-spacing-0 text-sm">
+        <thead>
+          <tr className="text-left text-xs text-muted-foreground">
+            <th className="border-b border-border py-2 font-medium">Nomor</th>
+            <th className="border-b border-border py-2 font-medium">Kasus</th>
+            <th className="border-b border-border py-2 font-medium">Prioritas</th>
+            <th className="border-b border-border py-2 font-medium">PIC</th>
+            <th className="border-b border-border py-2 font-medium">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {cases.map((item) => (
+            <tr key={item.id}>
+              <td className="border-b border-border py-3 text-xs font-medium text-muted-foreground">{item.number}</td>
+              <td className="border-b border-border py-3 pr-4">
+                <div className="max-w-[320px] truncate font-medium">{item.title}</div>
+                <div className="mt-1 text-xs text-muted-foreground">{item.category} - {item.location_name}</div>
+              </td>
+              <td className="border-b border-border py-3">
+                <Badge className={priorityTone(item.priority)}>{item.priority}</Badge>
+              </td>
+              <td className="border-b border-border py-3 text-muted-foreground">{item.pic ?? "Belum ditetapkan"}</td>
+              <td className="border-b border-border py-3">{item.status}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function CasesView({ cases }: { cases: CaseItem[] }) {
+  const columns = ["New", "Assigned", "In Progress", "Waiting Decision", "Resolved"];
+  const grouped = useMemo(
+    () =>
+      columns.map((status) => ({
+        status,
+        items: cases.filter((item) => item.status === status)
+      })),
+    [cases]
+  );
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold">Case Management</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Assignment, SLA, komentar, dan audit trail dalam satu alur.</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="ghost">
+            <CalendarClock size={16} />
+            Calendar
+          </Button>
+          <Button variant="secondary">
+            <ListChecks size={16} />
+            Action Plan
+          </Button>
+        </div>
+      </div>
+      <div className="grid gap-3 xl:grid-cols-5">
+        {grouped.map((column) => (
+          <section key={column.status} className="min-h-[420px] rounded-lg border border-border bg-white p-3 dark:bg-[#111827]">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-sm font-semibold">{column.status}</h3>
+              <Badge className="border-border bg-muted text-muted-foreground">{column.items.length}</Badge>
+            </div>
+            <div className="space-y-3">
+              {column.items.map((item) => (
+                <article key={item.id} className="rounded-md border border-border p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium text-muted-foreground">{item.number}</span>
+                    <Badge className={priorityTone(item.priority)}>{item.priority}</Badge>
+                  </div>
+                  <h4 className="text-sm font-semibold leading-5">{item.title}</h4>
+                  <p className="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground">{item.ai_summary}</p>
+                  <div className="mt-3 flex items-center justify-between gap-2 text-xs">
+                    <span className="truncate text-muted-foreground">{item.agency}</span>
+                    <span className="font-medium">{item.priority_score}</span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function IntakeView() {
+  const [rawText, setRawText] = useState(
+    "Ratusan warga melaporkan jalan akses pasar rusak berat di sekitar pasar induk. Distribusi pangan terganggu, laporan viral di media lokal, dan perlu tindak lanjut segera."
+  );
+  const [createCase, setCreateCase] = useState(true);
+  const intakeMutation = useMutation<IntakeResult, Error, string>({
+    mutationFn: (text) => runIntake(text, createCase)
+  });
+
+  const result = intakeMutation.data;
+  return (
+    <div className="grid gap-4 xl:grid-cols-[0.88fr_1.12fr]">
+      <Panel>
+        <SectionTitle title="AI Intake" meta="Antrean laporan masuk" />
+        <textarea
+          value={rawText}
+          onChange={(event) => setRawText(event.target.value)}
+          className="min-h-[260px] w-full resize-y rounded-md border border-border bg-background p-3 text-sm leading-6 outline-none focus:border-primary"
+        />
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={createCase} onChange={(event) => setCreateCase(event.target.checked)} />
+            Buat case dari hasil AI
+          </label>
+          <Button disabled={intakeMutation.isPending} onClick={() => intakeMutation.mutate(rawText)}>
+            <Send size={16} />
+            Proses Intake
+          </Button>
+        </div>
+      </Panel>
+      <Panel>
+        <SectionTitle title="Hasil Struktur AI" meta="Rekomendasi wajib diverifikasi manusia">
+          <Badge className="border-primary/20 bg-primary/10 text-primary">
+            {result ? `${Math.round(result.confidence * 100)}% confidence` : "Ready"}
+          </Badge>
+        </SectionTitle>
+        {result ? (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-border p-3">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <Badge className={priorityTone(result.priority)}>{result.priority}</Badge>
+                <Badge className="border-secondary/20 bg-secondary/10 text-secondary">{result.category}</Badge>
+                <Badge className="border-border bg-muted text-muted-foreground">{result.suggested_agency}</Badge>
+              </div>
+              <p className="text-sm leading-6">{result.summary}</p>
+              <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
+                <span>Skor: {result.priority_score}</span>
+                <span>Lokasi: {result.location_name}</span>
+                <span>Deadline: {result.suggested_deadline ?? "Perlu ditetapkan"}</span>
+              </div>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-3">
+              {result.recommendations.map((item) => (
+                <div key={String(item.horizon)} className="rounded-md border border-border p-3">
+                  <div className="text-sm font-semibold">{String(item.horizon)}</div>
+                  <p className="mt-2 text-xs leading-5 text-muted-foreground">{String(item.action)}</p>
+                  <div className="mt-3 text-xs font-medium">{String(item.estimated_time)}</div>
+                </div>
+              ))}
+            </div>
+            <div className="space-y-2">
+              {result.audit_notes.map((note) => (
+                <div key={note} className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <CheckCircle2 size={14} className="text-success" />
+                  {note}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="flex min-h-[360px] items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
+            <Bot size={18} className="mr-2 text-primary" />
+            Menunggu intake
+          </div>
+        )}
+      </Panel>
+    </div>
+  );
+}
+
+function MeetingView({ cases }: { cases: CaseItem[] }) {
+  const priorityCases = cases.filter((item) => item.priority === "Critical" || item.priority === "High");
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 xl:grid-cols-[1fr_0.8fr]">
+        <Panel className="bg-slate-950 text-white dark:bg-black">
+          <SectionTitle title="Dashboard Meeting" meta="Kasus prioritas, keputusan, PIC, deadline, progress" />
+          <div className="grid gap-3 lg:grid-cols-2">
+            {priorityCases.map((item) => (
+              <article key={item.id} className="rounded-lg border border-white/10 bg-white/5 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs text-white/60">{item.number}</span>
+                  <Badge className={priorityTone(item.priority)}>{item.priority}</Badge>
+                </div>
+                <h3 className="mt-3 text-lg font-semibold leading-6">{item.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-white/70">{item.ai_summary}</p>
+                <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+                  <span>PIC: {item.pic ?? "Belum ditetapkan"}</span>
+                  <span>OPD: {item.agency}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </Panel>
+        <Panel>
+          <SectionTitle title="AI Minutes" meta="Rangkuman rapat Wasdal" />
+          <div className="space-y-3">
+            <DecisionLine title="Keputusan" value="Dinas PUPR melakukan perbaikan darurat akses pasar induk." />
+            <DecisionLine title="Action Item" value="Validasi lapangan, dokumentasi titik kerusakan, dan laporan progres harian." />
+            <DecisionLine title="Deadline" value="H+3 untuk quick win, H+14 untuk rencana permanen." />
+          </div>
+          <Button className="mt-4 w-full" variant="secondary">
+            <FileText size={16} />
+            Generate Notulen
+          </Button>
+        </Panel>
+      </div>
+      <Panel>
+        <SectionTitle title="Action Plan" meta="Monitoring tindak lanjut" />
+        <CaseTable cases={cases} />
+      </Panel>
+    </div>
+  );
+}
+
+function DecisionLine({ title, value }: { title: string; value: string }) {
+  return (
+    <div className="rounded-md border border-border p-3">
+      <div className="text-xs font-medium text-muted-foreground">{title}</div>
+      <div className="mt-1 text-sm leading-6">{value}</div>
+    </div>
+  );
+}
+
+function KnowledgeView() {
+  const docs = [
+    { title: "SOP Rapat Wasdal dan Eskalasi Lintas OPD", type: "SOP", chunks: 12, tags: ["rapat", "eskalasi"] },
+    { title: "RPJMD - Prioritas Pembangunan Daerah", type: "RPJMD", chunks: 24, tags: ["pembangunan", "indikator"] },
+    { title: "Standar Harga dan DPA", type: "Dokumen Pemerintah", chunks: 18, tags: ["anggaran", "dpa"] }
+  ];
+  return (
+    <div className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
+      <Panel>
+        <SectionTitle title="Knowledge Base" meta="UU, PP, Permen, Perda, SOP, RPJMD, RKPD" />
+        <div className="space-y-3">
+          {docs.map((doc) => (
+            <div key={doc.title} className="rounded-md border border-border p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 font-medium">{doc.title}</div>
+                <Badge className="border-border bg-muted text-muted-foreground">{doc.type}</Badge>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {doc.tags.map((tag) => (
+                  <Badge key={tag} className="border-primary/20 bg-primary/10 text-primary">{tag}</Badge>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">{doc.chunks} chunk siap untuk RAG.</p>
+            </div>
+          ))}
+        </div>
+      </Panel>
+      <Panel>
+        <SectionTitle title="Analisis Lintas Data" meta="Regulasi, kasus, lokasi, anggaran, dan histori" />
+        <div className="space-y-3">
+          {[
+            "Kasus drainase berulang berkorelasi dengan titik pelayanan publik dan perlu paket normalisasi prioritas.",
+            "Keterlambatan perizinan investasi perlu keputusan lintas OPD sebelum berdampak pada realisasi investasi.",
+            "Kasus utilitas dekat sekolah masuk risiko keselamatan dan cocok sebagai quick win mingguan."
+          ].map((insight) => (
+            <div key={insight} className="flex items-start gap-3 rounded-md border border-border p-3">
+              <ChevronRight size={16} className="mt-0.5 text-primary" />
+              <p className="text-sm leading-6">{insight}</p>
+            </div>
+          ))}
+        </div>
+      </Panel>
+    </div>
+  );
+}

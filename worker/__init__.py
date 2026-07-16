@@ -1,0 +1,1 @@
+"""Wasdal worker package."""
