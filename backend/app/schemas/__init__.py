@@ -4,6 +4,7 @@ from app.schemas.cases import CaseAssign, CaseCommentCreate, CaseCreate, CaseLis
 from app.schemas.dashboard import DashboardResponse, MetricCard
 from app.schemas.knowledge import KnowledgeCreate, KnowledgeRead
 from app.schemas.reports import ExecutiveSummaryResponse
+from app.schemas.integration import ExternalReportCreate
 
 __all__ = [
     "CaseAssign",
@@ -15,6 +16,7 @@ __all__ = [
     "CaseUpdate",
     "DashboardResponse",
     "ExecutiveSummaryResponse",
+    "ExternalReportCreate",
     "IntakeRequest",
     "IntakeResult",
     "KnowledgeCreate",

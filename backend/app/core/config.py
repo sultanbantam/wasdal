@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     openai_base_url: str = Field(default="https://api.openai.com/v1", validation_alias="OPENAI_BASE_URL")
     openai_api_key: str = Field(default="", validation_alias="OPENAI_API_KEY")
     embedding_model: str = Field(default="text-embedding-3-small", validation_alias="EMBEDDING_MODEL")
+    integration_api_key: str = Field(default="wasdal-default-integration-key", validation_alias="INTEGRATION_API_KEY")
     jwt_secret: str = Field(default="change-me-in-production", validation_alias="JWT_SECRET")
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 8
