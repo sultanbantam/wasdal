@@ -475,7 +475,7 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
           <div className="mt-6 flex flex-col gap-3">
             <div className="grid grid-cols-2 gap-3">
               <Button 
-                variant={isRecording ? "destructive" : "secondary"} 
+                variant={isRecording ? "danger" : "secondary"} 
                 onClick={() => setIsRecording(!isRecording)}
               >
                 {isRecording ? (
@@ -497,7 +497,7 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
             
             <Button 
               className="w-full" 
-              variant="default" 
+              variant="primary" 
               onClick={() => meetingMutation.mutate()}
               disabled={meetingMutation.isPending || isRecording || isUploading}
             >
