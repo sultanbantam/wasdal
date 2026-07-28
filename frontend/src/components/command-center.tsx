@@ -29,7 +29,7 @@ import {
   Square,
   Upload
 } from "lucide-react";
-import { getCases, getDashboard, runIntake, runMeeting } from "@/lib/api";
+import { getCases, getDashboard, runIntake, runMeeting, getMeetings } from "@/lib/api";
 import { formatNumber, priorityTone } from "@/lib/utils";
 import type { CaseItem, DashboardData, IntakeResult, MeetingResult } from "@/types/wasdal";
 import { Badge, Button, Panel, ProgressBar, SectionTitle } from "@/components/ui";
@@ -39,13 +39,14 @@ const TacticalMap = dynamic(() => import("@/components/tactical-map").then((mod)
   loading: () => <div className="h-[360px] rounded-lg border border-border bg-muted" />
 });
 
-type ModuleKey = "dashboard" | "cases" | "intake" | "meeting" | "knowledge";
+type ModuleKey = "dashboard" | "cases" | "intake" | "meeting" | "archive" | "knowledge";
 
 const modules: Array<{ key: ModuleKey; label: string; icon: typeof Gauge }> = [
   { key: "dashboard", label: "Command Center", icon: Gauge },
   { key: "cases", label: "Case Board", icon: ClipboardList },
   { key: "intake", label: "AI Intake", icon: Sparkles },
   { key: "meeting", label: "Meeting Mode", icon: UsersRound },
+  { key: "archive", label: "Meeting Archive", icon: FileText },
   { key: "knowledge", label: "Knowledge", icon: Layers }
 ];
 
@@ -145,6 +146,7 @@ export function CommandCenter() {
           {active === "cases" ? <CasesView cases={cases} /> : null}
           {active === "intake" ? <IntakeView /> : null}
           {active === "meeting" ? <MeetingView cases={cases} /> : null}
+          {active === "archive" ? <MeetingArchiveView /> : null}
           {active === "knowledge" ? <KnowledgeView /> : null}
         </main>
       </div>
@@ -598,6 +600,80 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
           </div>
         </Panel>
       </div>
+    </div>
+  );
+}
+
+function MeetingArchiveView() {
+  const { data: meetings, isLoading } = useQuery({
+    queryKey: ["meetings"],
+    queryFn: getMeetings
+  });
+
+  if (isLoading) {
+    return <div className="p-4 text-center text-sm text-muted-foreground">Loading arsip rapat...</div>;
+  }
+
+  if (!meetings || meetings.length === 0) {
+    return (
+      <Panel>
+        <div className="py-12 text-center text-muted-foreground">
+          <FileText size={48} className="mx-auto mb-4 opacity-20" />
+          <p>Belum ada arsip rapat.</p>
+        </div>
+      </Panel>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <Panel>
+        <SectionTitle title="Meeting Archive" meta="Seluruh notulen rapat, keputusan, dan tugas" />
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          {meetings.map((meeting) => (
+            <article key={meeting.id} className="flex flex-col rounded-lg border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-medium text-muted-foreground">
+                  {new Date(meeting.created_at).toLocaleDateString("id-ID", { day: 'numeric', month: 'long', year: 'numeric' })}
+                </span>
+                <Badge className={meeting.confidence > 0.8 ? "border-success bg-success/10 text-success" : "border-warning bg-warning/10 text-warning"}>
+                  AI Confidence: {Math.round(meeting.confidence * 100)}%
+                </Badge>
+              </div>
+              <h3 className="mt-3 text-lg font-semibold leading-tight text-foreground">{meeting.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{meeting.summary}</p>
+              
+              <div className="mt-4 flex-1 space-y-4">
+                <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Keputusan</h4>
+                  <ul className="list-inside list-disc text-sm text-foreground/80 space-y-1">
+                    {meeting.decisions.map((decision, i) => (
+                      <li key={i}>{decision}</li>
+                    ))}
+                  </ul>
+                </div>
+                
+                {meeting.action_items && meeting.action_items.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Action Items</h4>
+                    <div className="space-y-2">
+                      {meeting.action_items.map((ai, i) => (
+                        <div key={i} className="rounded-md bg-muted/50 p-2 text-sm border border-border/50">
+                          <p className="font-medium text-foreground">{ai.task || ai.action}</p>
+                          <div className="mt-1 flex justify-between text-xs text-muted-foreground">
+                            <span>PIC: {ai.pic || ai.assignee || "Belum ditentukan"}</span>
+                            <span>Selesai: {ai.deadline}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+      </Panel>
     </div>
   );
 }

@@ -81,3 +81,13 @@ export type MeetingResult = {
   confidence: number;
   record_id?: string | null;
 };
+
+export type MeetingRecord = {
+  id: string;
+  title: string;
+  summary: string;
+  decisions: string[];
+  action_items: Array<{ task?: string; action?: string; pic?: string; assignee?: string; deadline: string; status?: string }>;
+  confidence: number;
+  created_at: string;
+};

@@ -1,5 +1,5 @@
 import { mockCases, mockDashboard } from "@/lib/mock-data";
-import type { CaseItem, DashboardData, IntakeResult, MeetingResult } from "@/types/wasdal";
+import type { CaseItem, DashboardData, IntakeResult, MeetingResult, MeetingRecord } from "@/types/wasdal";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
@@ -42,4 +42,8 @@ export function runMeeting(title: string, transcript: string, saveRecord: boolea
     method: "POST",
     body: JSON.stringify({ title, transcript, save_record: saveRecord })
   });
+}
+
+export function getMeetings() {
+  return request<MeetingRecord[]>("/meetings", undefined, []);
 }
