@@ -25,15 +25,23 @@ export function getDashboard() {
   return request<DashboardData>("/dashboard", undefined, mockDashboard);
 }
 
-export async function getCases() {
-  const result = await request<{ items: CaseItem[] }>("/cases?size=50", undefined, { items: mockCases });
+export async function getCases(query?: string) {
+  const url = query ? `/cases?size=50&q=${encodeURIComponent(query)}` : "/cases?size=50";
+  const result = await request<{ items: CaseItem[] }>(url, undefined, { items: mockCases });
   return result.items;
 }
 
-export function runIntake(rawText: string, createCase: boolean) {
+export function runIntake(rawText: string, createCase: boolean, attachments: string[] = []) {
   return request<IntakeResult>("/ai/intake", {
     method: "POST",
-    body: JSON.stringify({ raw_text: rawText, source: "Manual", create_case: createCase, reporter_name: "Operator Ekbang" })
+    body: JSON.stringify({ raw_text: rawText, source: "Manual", create_case: createCase, reporter_name: "Operator Ekbang", attachments })
+  });
+}
+
+export function updateCaseStatus(caseId: string, status: string) {
+  return request<CaseItem>(`/cases/${caseId}/status`, {
+    method: "POST",
+    body: JSON.stringify({ status })
   });
 }
 

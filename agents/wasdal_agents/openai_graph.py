@@ -56,9 +56,17 @@ Teks Laporan: {raw_text}
 
 Ekstrak semua informasi dan buat rekomendasi paling solutif!"""
 
+        messages_content: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
+        for attachment in attachments or []:
+            if attachment.startswith("data:image"):
+                messages_content.append({
+                    "type": "image_url",
+                    "image_url": {"url": attachment}
+                })
+
         completion = self.client.beta.chat.completions.parse(
             model=self.model,
-            messages=[{"role": "user", "content": prompt}],
+            messages=[{"role": "user", "content": messages_content}],
             response_format=IntakeOutput,
         )
         

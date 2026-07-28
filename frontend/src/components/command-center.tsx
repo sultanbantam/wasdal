@@ -29,7 +29,7 @@ import {
   Square,
   Upload
 } from "lucide-react";
-import { getCases, getDashboard, runIntake, runMeeting, getMeetings } from "@/lib/api";
+import { getCases, getDashboard, runIntake, runMeeting, getMeetings, updateCaseStatus } from "@/lib/api";
 import { formatNumber, priorityTone } from "@/lib/utils";
 import type { CaseItem, DashboardData, IntakeResult, MeetingResult } from "@/types/wasdal";
 import { Badge, Button, Panel, ProgressBar, SectionTitle } from "@/components/ui";
@@ -53,8 +53,10 @@ const modules: Array<{ key: ModuleKey; label: string; icon: typeof Gauge }> = [
 export function CommandCenter() {
   const [active, setActive] = useState<ModuleKey>("dashboard");
   const [dark, setDark] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  
   const dashboardQuery = useQuery({ queryKey: ["dashboard"], queryFn: getDashboard });
-  const casesQuery = useQuery({ queryKey: ["cases"], queryFn: getCases });
+  const casesQuery = useQuery({ queryKey: ["cases", searchQuery], queryFn: () => getCases(searchQuery) });
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
@@ -78,7 +80,12 @@ export function CommandCenter() {
           </div>
           <div className="hidden max-w-xl flex-1 items-center rounded-md border border-border bg-white px-3 py-2 dark:bg-[#111827] md:flex">
             <Search size={16} className="text-muted-foreground" />
-            <input className="ml-2 w-full bg-transparent text-sm outline-none" placeholder="Cari kasus, OPD, lokasi, atau keputusan" />
+            <input 
+              className="ml-2 w-full bg-transparent text-sm outline-none" 
+              placeholder="Cari kasus, OPD, lokasi, atau keputusan" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" className="h-9 w-9 px-0" title="Notifikasi">
@@ -279,6 +286,7 @@ function CaseTable({ cases }: { cases: CaseItem[] }) {
 }
 
 function CasesView({ cases }: { cases: CaseItem[] }) {
+  const queryClient = useQueryClient();
   const columns = ["New", "Assigned", "In Progress", "Waiting Decision", "Resolved"];
   const grouped = useMemo(
     () =>
@@ -288,6 +296,15 @@ function CasesView({ cases }: { cases: CaseItem[] }) {
       })),
     [cases]
   );
+  
+  const resolveMutation = useMutation({
+    mutationFn: (id: string) => updateCaseStatus(id, "Resolved"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cases"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    }
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -326,6 +343,16 @@ function CasesView({ cases }: { cases: CaseItem[] }) {
                     <span className="truncate text-muted-foreground">{item.agency}</span>
                     <span className="font-medium">{item.priority_score}</span>
                   </div>
+                  {item.status !== "Resolved" && (
+                    <Button 
+                      variant="ghost" 
+                      className="w-full mt-3 h-8 text-xs border border-border/50 text-muted-foreground hover:bg-success hover:text-white transition-colors"
+                      onClick={() => resolveMutation.mutate(item.id)}
+                      disabled={resolveMutation.isPending}
+                    >
+                      <CheckCircle2 size={13} className="mr-1" /> Resolve
+                    </Button>
+                  )}
                 </article>
               ))}
             </div>
@@ -344,14 +371,32 @@ function IntakeView() {
   const queryClient = useQueryClient();
   const [rawText, setRawText] = useState("");
   const [createCase, setCreateCase] = useState(true);
-  const intakeMutation = useMutation<IntakeResult, Error, string>({
-    mutationFn: (text) => runIntake(text, createCase),
+  const [attachments, setAttachments] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const intakeMutation = useMutation<IntakeResult, Error, { text: string; atts: string[] }>({
+    mutationFn: ({ text, atts }) => runIntake(text, createCase, atts),
     onSuccess: () => {
       setRawText("");
+      setAttachments([]);
       queryClient.invalidateQueries({ queryKey: ["cases"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     }
   });
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (typeof event.target?.result === "string") {
+          setAttachments([event.target.result]);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   const result = intakeMutation.data;
   return (
@@ -361,17 +406,41 @@ function IntakeView() {
         <textarea
           value={rawText}
           onChange={(event) => setRawText(event.target.value)}
-          className="min-h-[260px] w-full resize-y rounded-md border border-border bg-background p-3 text-sm leading-6 outline-none focus:border-primary"
+          placeholder="Ketik teks laporan di sini..."
+          className="min-h-[200px] w-full resize-y rounded-md border border-border bg-background p-3 text-sm leading-6 outline-none focus:border-primary"
         />
+        {attachments.length > 0 && (
+          <div className="mt-3 relative inline-block">
+            <img src={attachments[0]} alt="Attachment" className="max-h-[100px] rounded border border-border" />
+            <button 
+              className="absolute -top-2 -right-2 bg-danger text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+              onClick={() => setAttachments([])}
+            >
+              ×
+            </button>
+          </div>
+        )}
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={createCase} onChange={(event) => setCreateCase(event.target.checked)} />
             Buat case dari hasil AI
           </label>
-          <Button disabled={intakeMutation.isPending} onClick={() => intakeMutation.mutate(rawText)}>
-            <Send size={16} />
-            Proses Intake
-          </Button>
+          <div className="flex gap-2">
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*"
+              onChange={handleFileUpload}
+            />
+            <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>
+              <Upload size={16} /> Foto
+            </Button>
+            <Button disabled={intakeMutation.isPending} onClick={() => intakeMutation.mutate({ text: rawText, atts: attachments })}>
+              <Send size={16} />
+              Proses Intake
+            </Button>
+          </div>
         </div>
       </Panel>
       <Panel>
