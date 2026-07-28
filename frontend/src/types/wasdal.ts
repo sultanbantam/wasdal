@@ -72,3 +72,12 @@ export type IntakeResult = {
   audit_notes: string[];
   case_id?: string | null;
 };
+
+export type MeetingResult = {
+  title: string;
+  summary: string;
+  decisions: string[];
+  action_items: Array<{ action: string; assignee: string; deadline: string }>;
+  confidence: number;
+  record_id?: string | null;
+};

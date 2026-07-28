@@ -1,5 +1,5 @@
 import { mockCases, mockDashboard } from "@/lib/mock-data";
-import type { CaseItem, DashboardData, IntakeResult } from "@/types/wasdal";
+import type { CaseItem, DashboardData, IntakeResult, MeetingResult } from "@/types/wasdal";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
@@ -34,5 +34,12 @@ export function runIntake(rawText: string, createCase: boolean) {
   return request<IntakeResult>("/ai/intake", {
     method: "POST",
     body: JSON.stringify({ raw_text: rawText, source: "Manual", create_case: createCase, reporter_name: "Operator Ekbang" })
+  });
+}
+
+export function runMeeting(title: string, transcript: string, saveRecord: boolean) {
+  return request<MeetingResult>("/ai/meeting", {
+    method: "POST",
+    body: JSON.stringify({ title, transcript, save_record: saveRecord })
   });
 }

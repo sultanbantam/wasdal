@@ -26,9 +26,9 @@ import {
   Sun,
   UsersRound
 } from "lucide-react";
-import { getCases, getDashboard, runIntake } from "@/lib/api";
+import { getCases, getDashboard, runIntake, runMeeting } from "@/lib/api";
 import { formatNumber, priorityTone } from "@/lib/utils";
-import type { CaseItem, DashboardData, IntakeResult } from "@/types/wasdal";
+import type { CaseItem, DashboardData, IntakeResult, MeetingResult } from "@/types/wasdal";
 import { Badge, Button, Panel, ProgressBar, SectionTitle } from "@/components/ui";
 
 const TacticalMap = dynamic(() => import("@/components/tactical-map").then((mod) => mod.TacticalMap), {
@@ -293,7 +293,7 @@ function CasesView({ cases }: { cases: CaseItem[] }) {
             <CalendarClock size={16} />
             Calendar
           </Button>
-          <Button variant="secondary">
+          <Button variant="secondary" onClick={() => document.getElementById("action-plan")?.scrollIntoView({ behavior: "smooth" })}>
             <ListChecks size={16} />
             Action Plan
           </Button>
@@ -411,6 +411,14 @@ function IntakeView() {
 
 function MeetingView({ cases }: { cases: CaseItem[] }) {
   const priorityCases = cases.filter((item) => item.priority === "Critical" || item.priority === "High");
+  const dummyTranscript = "Rapat koordinasi membahas genangan air di sekitar pasar induk yang rusak berat. Bapak Sekda memutuskan bahwa Dinas PUPR harus segera melakukan perbaikan darurat akses pasar induk tersebut. Sebagai action item pertama, Kepala Dinas PUPR ditugaskan untuk melakukan validasi lapangan dan dokumentasi titik kerusakan, dengan tenggat waktu hari ini (H+0). Selanjutnya, Tim teknis PUPR akan melakukan perbaikan sementara selambatnya 3 hari ke depan (H+3). Terakhir, Bappeda dan PUPR diminta menyusun rencana permanen dalam waktu dua minggu (H+14). Rapat ditutup.";
+
+  const meetingMutation = useMutation<MeetingResult, Error, void>({
+    mutationFn: () => runMeeting("Rapat Koordinasi Penanganan Genangan Pasar Induk", dummyTranscript, false)
+  });
+
+  const result = meetingMutation.data;
+
   return (
     <div className="space-y-4">
       <div className="grid gap-4 xl:grid-cols-[1fr_0.8fr]">
@@ -435,18 +443,45 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
         </Panel>
         <Panel>
           <SectionTitle title="AI Minutes" meta="Rangkuman rapat Wasdal" />
-          <div className="space-y-3">
-            <DecisionLine title="Keputusan" value="Dinas PUPR melakukan perbaikan darurat akses pasar induk." />
-            <DecisionLine title="Action Item" value="Validasi lapangan, dokumentasi titik kerusakan, dan laporan progres harian." />
-            <DecisionLine title="Deadline" value="H+3 untuk quick win, H+14 untuk rencana permanen." />
-          </div>
-          <Button className="mt-4 w-full" variant="secondary">
-            <FileText size={16} />
-            Generate Notulen
+          {result ? (
+            <div className="space-y-3">
+              <DecisionLine title="Keputusan" value={result.decisions.join(", ")} />
+              {result.action_items.map((ai, index) => (
+                <div key={index} className="space-y-1">
+                  <DecisionLine title={`Action Item ${index + 1}`} value={ai.action} />
+                  <div className="flex justify-between text-xs text-muted-foreground px-3">
+                    <span>PIC: {ai.assignee}</span>
+                    <span>Deadline: {ai.deadline}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <DecisionLine title="Status" value="Klik tombol di bawah untuk meminta AI mendengarkan dan merangkum rapat." />
+            </div>
+          )}
+          <Button 
+            className="mt-4 w-full" 
+            variant="secondary" 
+            onClick={() => meetingMutation.mutate()}
+            disabled={meetingMutation.isPending}
+          >
+            {meetingMutation.isPending ? (
+              <span className="flex items-center gap-2">
+                <Bot size={16} className="animate-pulse" />
+                Generating...
+              </span>
+            ) : (
+              <span className="flex items-center gap-2">
+                <FileText size={16} />
+                Generate Notulen
+              </span>
+            )}
           </Button>
         </Panel>
       </div>
-      <Panel>
+      <Panel id="action-plan">
         <SectionTitle title="Action Plan" meta="Monitoring tindak lanjut" />
         <CaseTable cases={cases} />
       </Panel>
