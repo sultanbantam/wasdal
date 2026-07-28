@@ -1,12 +1,43 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+import tempfile
+import os
+from openai import OpenAI
 
 from app.db.session import get_db
 from app.models import MeetingRecord
+from app.core.config import get_settings
 
 router = APIRouter()
 
+@router.post("/transcribe")
+async def transcribe_audio(file: UploadFile = File(...)) -> dict:
+    settings = get_settings()
+    if not settings.openai_api_key:
+        raise HTTPException(status_code=500, detail="OpenAI API Key is not configured")
+    
+    client = OpenAI(api_key=settings.openai_api_key)
+    
+    # Save the uploaded file temporarily
+    suffix = os.path.splitext(file.filename)[1] if file.filename else ".m4a"
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        content = await file.read()
+        tmp.write(content)
+        tmp_path = tmp.name
+
+    try:
+        with open(tmp_path, "rb") as audio_file:
+            transcript = client.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file
+            )
+        return {"text": transcript.text}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
 
 @router.get("")
 def list_meetings(db: Session = Depends(get_db)) -> list[dict]:

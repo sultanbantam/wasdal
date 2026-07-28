@@ -63,6 +63,10 @@ def receive_external_report(
     # 4. Save to DB
     case = case_service.create_case(case_create, actor_id=None)
 
+    # 5. Trigger Notification (Mock)
+    from worker.app.tasks import send_notification
+    send_notification.delay(case_id=str(case.id), agency=case.agency or "Unknown", title=case.title)
+
     return {
         "status": "success",
         "message": "Report received, analyzed, and saved successfully.",

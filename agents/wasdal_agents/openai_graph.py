@@ -46,12 +46,15 @@ class OpenAIWasdalAgentGraph:
         self.model = "gpt-4o-mini"
 
     def run_intake(self, raw_text: str, source: str = "Manual", attachments: list[str] | None = None) -> dict[str, Any]:
-        prompt = f"""Anda adalah AI asisten untuk Pemerintah Kota Tangerang Selatan (Bagian Ekbang).
-Tugas Anda adalah memproses laporan masyarakat atau dinas berikut:
+        prompt = f"""Anda adalah AI asisten super-cerdas untuk Pemerintah Kota Tangerang Selatan (Bagian Ekbang).
+Tugas Anda adalah merespons laporan masyarakat berikut dengan solusi yang SANGAT AGRESIF, TANGGAP, OUT OF THE BOX, dan IMPLEMENTATIF.
+JANGAN gunakan bahasa normatif atau birokratis. Sebutkan tindakan taktis nyata (misal: "Gunakan dana CSR", "Kirim tim Katak", "Libatkan RT/RW untuk gotong royong").
+Berikan estimasi waktu yang ambisius (hitungan jam untuk kondisi darurat).
+
 Sumber: {source}
 Teks Laporan: {raw_text}
 
-Ekstrak semua informasi yang diperlukan dengan akurat."""
+Ekstrak semua informasi dan buat rekomendasi paling solutif!"""
 
         completion = self.client.beta.chat.completions.parse(
             model=self.model,

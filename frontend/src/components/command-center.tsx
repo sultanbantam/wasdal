@@ -24,7 +24,10 @@ import {
   ShieldCheck,
   Sparkles,
   Sun,
-  UsersRound
+  UsersRound,
+  Mic,
+  Square,
+  Upload
 } from "lucide-react";
 import { getCases, getDashboard, runIntake, runMeeting } from "@/lib/api";
 import { formatNumber, priorityTone } from "@/lib/utils";
@@ -417,6 +420,9 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
   const priorityCases = cases.filter((item) => item.priority === "Critical" || item.priority === "High");
   const dummyTranscript = "Rapat koordinasi membahas genangan air di sekitar pasar induk yang rusak berat. Bapak Sekda memutuskan bahwa Dinas PUPR harus segera melakukan perbaikan darurat akses pasar induk tersebut. Sebagai action item pertama, Kepala Dinas PUPR ditugaskan untuk melakukan validasi lapangan dan dokumentasi titik kerusakan, dengan tenggat waktu hari ini (H+0). Selanjutnya, Tim teknis PUPR akan melakukan perbaikan sementara selambatnya 3 hari ke depan (H+3). Terakhir, Bappeda dan PUPR diminta menyusun rencana permanen dalam waktu dua minggu (H+14). Rapat ditutup.";
 
+  const [isRecording, setIsRecording] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  
   const meetingMutation = useMutation<MeetingResult, Error, void>({
     mutationFn: () => runMeeting("Rapat Koordinasi Penanganan Genangan Pasar Induk", dummyTranscript, false)
   });
@@ -462,27 +468,52 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
             </div>
           ) : (
             <div className="space-y-3">
-              <DecisionLine title="Status" value="Klik tombol di bawah untuk meminta AI mendengarkan dan merangkum rapat." />
+              <DecisionLine title="Status" value="Mulai merekam, unggah dokumen rapat, atau buat notulen dari draft." />
             </div>
           )}
-          <Button 
-            className="mt-4 w-full" 
-            variant="secondary" 
-            onClick={() => meetingMutation.mutate()}
-            disabled={meetingMutation.isPending}
-          >
-            {meetingMutation.isPending ? (
-              <span className="flex items-center gap-2">
-                <Bot size={16} className="animate-pulse" />
-                Generating...
-              </span>
-            ) : (
-              <span className="flex items-center gap-2">
-                <FileText size={16} />
-                Generate Notulen
-              </span>
-            )}
-          </Button>
+          
+          <div className="mt-6 flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-3">
+              <Button 
+                variant={isRecording ? "destructive" : "secondary"} 
+                onClick={() => setIsRecording(!isRecording)}
+              >
+                {isRecording ? (
+                  <span className="flex items-center gap-2">
+                    <Square size={16} /> Stop Rekam
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Mic size={16} /> Mulai Rekam
+                  </span>
+                )}
+              </Button>
+              <Button variant="secondary" onClick={() => setIsUploading(true)}>
+                <span className="flex items-center gap-2">
+                  <Upload size={16} /> {isUploading ? "Uploading..." : "Unggah Materi"}
+                </span>
+              </Button>
+            </div>
+            
+            <Button 
+              className="w-full" 
+              variant="default" 
+              onClick={() => meetingMutation.mutate()}
+              disabled={meetingMutation.isPending || isRecording || isUploading}
+            >
+              {meetingMutation.isPending ? (
+                <span className="flex items-center gap-2">
+                  <Bot size={16} className="animate-pulse" />
+                  Generating AI Minutes...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <FileText size={16} />
+                  Generate Notulen
+                </span>
+              )}
+            </Button>
+          </div>
         </Panel>
       </div>
     </div>

@@ -45,3 +45,10 @@ def process_intake(raw_text: str, source: str = "Worker", create_case: bool = Tr
 @celery_app.task(name="worker.app.tasks.process_meeting")
 def process_meeting(title: str, transcript: str) -> dict:
     return AIOrchestrator().meeting(title, transcript)
+
+@celery_app.task(name="worker.app.tasks.send_notification")
+def send_notification(case_id: str, agency: str, title: str) -> dict:
+    # Simulasi pengiriman notifikasi via WhatsApp / Email
+    print(f"Mengirim notifikasi ke OPD {agency} untuk kasus {case_id}: {title}")
+    # Jika API WA / Email tersedia, lakukan HTTP request ke provider di sini
+    return {"status": "sent", "agency": agency, "case_id": case_id}
