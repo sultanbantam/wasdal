@@ -325,6 +325,10 @@ function CasesView({ cases }: { cases: CaseItem[] }) {
           </section>
         ))}
       </div>
+      <Panel id="action-plan">
+        <SectionTitle title="Action Plan" meta="Monitoring tindak lanjut" />
+        <CaseTable cases={cases} />
+      </Panel>
     </div>
   );
 }
@@ -481,10 +485,6 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
           </Button>
         </Panel>
       </div>
-      <Panel id="action-plan">
-        <SectionTitle title="Action Plan" meta="Monitoring tindak lanjut" />
-        <CaseTable cases={cases} />
-      </Panel>
     </div>
   );
 }
