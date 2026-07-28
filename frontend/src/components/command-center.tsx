@@ -337,12 +337,16 @@ function CasesView({ cases }: { cases: CaseItem[] }) {
 }
 
 function IntakeView() {
-  const [rawText, setRawText] = useState(
-    "Ratusan warga melaporkan jalan akses pasar rusak berat di sekitar pasar induk. Distribusi pangan terganggu, laporan viral di media lokal, dan perlu tindak lanjut segera."
-  );
+  const queryClient = useQueryClient();
+  const [rawText, setRawText] = useState("");
   const [createCase, setCreateCase] = useState(true);
   const intakeMutation = useMutation<IntakeResult, Error, string>({
-    mutationFn: (text) => runIntake(text, createCase)
+    mutationFn: (text) => runIntake(text, createCase),
+    onSuccess: () => {
+      setRawText("");
+      queryClient.invalidateQueries({ queryKey: ["cases"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    }
   });
 
   const result = intakeMutation.data;
@@ -426,6 +430,9 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<BlobPart[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [saveRecord, setSaveRecord] = useState(true);
+
 
   const startRecording = async () => {
     try {
@@ -486,8 +493,13 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
     uploadToTranscribe(file, file.name);
   };
   
+  const queryClient = useQueryClient();
   const meetingMutation = useMutation<MeetingResult, Error, void>({
-    mutationFn: () => runMeeting("Rapat Koordinasi", transcriptText || dummyTranscript, false)
+    mutationFn: () => runMeeting("Rapat Koordinasi", transcriptText || dummyTranscript, saveRecord),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cases"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    }
   });
 
   const result = meetingMutation.data;
