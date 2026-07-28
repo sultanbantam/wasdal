@@ -20,19 +20,32 @@ async def transcribe_audio(file: UploadFile = File(...)) -> dict:
     client = OpenAI(api_key=settings.openai_api_key)
     
     # Save the uploaded file temporarily
-    suffix = os.path.splitext(file.filename)[1] if file.filename else ".m4a"
+    suffix = os.path.splitext(file.filename)[1].lower() if file.filename else ".m4a"
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         content = await file.read()
         tmp.write(content)
         tmp_path = tmp.name
 
     try:
-        with open(tmp_path, "rb") as audio_file:
-            transcript = client.audio.transcriptions.create(
-                model="whisper-1",
-                file=audio_file
-            )
-        return {"text": transcript.text}
+        if suffix == ".pdf":
+            import pypdf
+            text = ""
+            with open(tmp_path, "rb") as f:
+                reader = pypdf.PdfReader(f)
+                for page in reader.pages:
+                    text += page.extract_text() + "\n"
+            return {"text": text}
+        elif suffix in [".txt", ".md", ".csv"]:
+            with open(tmp_path, "r", encoding="utf-8") as f:
+                return {"text": f.read()}
+        else:
+            # Assume audio and send to Whisper
+            with open(tmp_path, "rb") as audio_file:
+                transcript = client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=audio_file
+                )
+            return {"text": transcript.text}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:

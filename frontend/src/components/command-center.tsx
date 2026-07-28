@@ -555,7 +555,7 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
                 type="file"
                 ref={fileInputRef}
                 className="hidden"
-                accept="audio/*"
+                accept="audio/*,application/pdf,text/plain"
                 onChange={handleFileUpload}
               />
               <Button variant="secondary" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
