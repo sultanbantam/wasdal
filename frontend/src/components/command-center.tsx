@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   BarChart3,
@@ -419,12 +419,75 @@ function IntakeView() {
 function MeetingView({ cases }: { cases: CaseItem[] }) {
   const priorityCases = cases.filter((item) => item.priority === "Critical" || item.priority === "High");
   const dummyTranscript = "Rapat koordinasi membahas genangan air di sekitar pasar induk yang rusak berat. Bapak Sekda memutuskan bahwa Dinas PUPR harus segera melakukan perbaikan darurat akses pasar induk tersebut. Sebagai action item pertama, Kepala Dinas PUPR ditugaskan untuk melakukan validasi lapangan dan dokumentasi titik kerusakan, dengan tenggat waktu hari ini (H+0). Selanjutnya, Tim teknis PUPR akan melakukan perbaikan sementara selambatnya 3 hari ke depan (H+3). Terakhir, Bappeda dan PUPR diminta menyusun rencana permanen dalam waktu dua minggu (H+14). Rapat ditutup.";
-
+  
+  const [transcriptText, setTranscriptText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<BlobPart[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        await uploadToTranscribe(audioBlob, "recording.webm");
+        stream.getTracks().forEach((track) => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      alert("Gagal mengakses mikrofon: " + err);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const uploadToTranscribe = async (fileOrBlob: Blob | File, filename: string) => {
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", fileOrBlob, filename);
+      
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001/api/v1";
+      const res = await fetch(`${API_URL}/meetings/transcribe`, {
+        method: "POST",
+        body: formData
+      });
+      
+      if (!res.ok) throw new Error("Gagal mentranskrip audio");
+      const data = await res.json();
+      setTranscriptText((prev) => prev + (prev ? " " : "") + data.text);
+    } catch (err) {
+      alert("Terjadi kesalahan: " + err);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    uploadToTranscribe(file, file.name);
+  };
   
   const meetingMutation = useMutation<MeetingResult, Error, void>({
-    mutationFn: () => runMeeting("Rapat Koordinasi Penanganan Genangan Pasar Induk", dummyTranscript, false)
+    mutationFn: () => runMeeting("Rapat Koordinasi", transcriptText || dummyTranscript, false)
   });
 
   const result = meetingMutation.data;
@@ -476,7 +539,7 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
             <div className="grid grid-cols-2 gap-3">
               <Button 
                 variant={isRecording ? "danger" : "secondary"} 
-                onClick={() => setIsRecording(!isRecording)}
+                onClick={isRecording ? stopRecording : startRecording}
               >
                 {isRecording ? (
                   <span className="flex items-center gap-2">
@@ -488,7 +551,14 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
                   </span>
                 )}
               </Button>
-              <Button variant="secondary" onClick={() => setIsUploading(true)}>
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="audio/*"
+                onChange={handleFileUpload}
+              />
+              <Button variant="secondary" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
                 <span className="flex items-center gap-2">
                   <Upload size={16} /> {isUploading ? "Uploading..." : "Unggah Materi"}
                 </span>
