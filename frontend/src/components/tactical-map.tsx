@@ -13,10 +13,11 @@ const colorByPriority = {
 };
 
 export function TacticalMap({ points }: { points: DashboardData["map_points"] }) {
-  const center: [number, number] = points[0] ? [points[0].latitude, points[0].longitude] : [-6.2, 106.83];
+  // Center to Tangerang Selatan by default
+  const center: [number, number] = [-6.2886, 106.7179];
   return (
-    <div className="h-[360px] overflow-hidden rounded-lg border border-border">
-      <MapContainer center={center} zoom={12} scrollWheelZoom={false} className="h-full">
+    <div className="h-full w-full overflow-hidden rounded-lg border border-border min-h-[400px]">
+      <MapContainer center={center} zoom={13} scrollWheelZoom={true} className="h-full w-full">
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

@@ -159,14 +159,16 @@ function DashboardView({ dashboard, cases }: { dashboard: DashboardData; cases: 
     <div className="space-y-4">
       <MetricGrid metrics={dashboard.metrics} />
       <div className="grid gap-4 xl:grid-cols-[1.35fr_0.65fr]">
-        <Panel>
+        <Panel className="flex flex-col">
           <SectionTitle title="Peta Kasus" meta="Sebaran lokasi dan tingkat prioritas">
             <Button variant="ghost">
               <Filter size={16} />
               Filter
             </Button>
           </SectionTitle>
-          <TacticalMap points={dashboard.map_points} />
+          <div className="flex-1">
+            <TacticalMap points={dashboard.map_points} />
+          </div>
         </Panel>
         <Panel>
           <SectionTitle title="Copilot Ekbang" meta="Brief untuk rapat dan eskalasi" />
