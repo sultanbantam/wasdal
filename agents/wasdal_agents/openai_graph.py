@@ -25,7 +25,6 @@ class IntakeOutput(BaseModel):
     suggested_deadline: str | None = Field(default=None, description="Tenggat waktu penyelesaian (ISO format)")
     recommendations: list[IntakeRecommendation] = Field(description="Rekomendasi tindakan yang harus dilakukan")
     confidence: float = Field(description="Tingkat keyakinan AI dari 0.0 sampai 1.0")
-    entities: dict[str, Any] = Field(default_factory=dict, description="Entitas tambahan yang diekstrak")
 
 class ActionItem(BaseModel):
     task: str = Field(description="Tugas yang harus dilakukan")
@@ -75,7 +74,7 @@ Ekstrak semua informasi yang diperlukan dengan akurat."""
             "suggested_deadline": output.suggested_deadline,
             "recommendations": [rec.model_dump() for rec in output.recommendations],
             "confidence": output.confidence,
-            "entities": output.entities,
+            "entities": {},
             "audit_notes": ["Diproses menggunakan OpenAI (GPT-4o-mini)"],
         }
 
