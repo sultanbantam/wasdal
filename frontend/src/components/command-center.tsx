@@ -474,7 +474,17 @@ function IntakeView() {
     try {
       const res = await syncLapor();
       alert(`${res.message}`);
-      queryClient.invalidateQueries({ queryKey: ["cases"] });
+      if (res.message && res.message.includes("Mock mode")) {
+        queryClient.setQueryData(["cases"], (old: any) => {
+          const mockCases = [
+            { id: `mock-case-1`, number: res.synced_cases[0], title: "Aduan Warga: Jalan raya Serpong berlubang...", description: "Jalan berlubang membahayakan pengendara.", priority: "High", priority_score: 9.5, category: "Infrastruktur", location_name: "Tangerang Selatan", status: "New", agency: "Dinas PUPR", source: "LAPOR!", ai_summary: "Warga melaporkan jalan berlubang di jalan raya Serpong. Sangat berbahaya." },
+            { id: `mock-case-2`, number: res.synced_cases[1], title: "Aduan Warga: Tumpukan sampah di Jombang...", description: "Tumpukan sampah tidak diangkut.", priority: "Medium", priority_score: 7.2, category: "Lingkungan", location_name: "Tangerang Selatan", status: "New", agency: "Dinas Lingkungan Hidup", source: "LAPOR!", ai_summary: "Warga melaporkan tumpukan sampah yang belum diangkut selama 3 hari." }
+          ];
+          return [...mockCases, ...(old || [])];
+        });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["cases"] });
+      }
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     } catch (err) {
       alert(err);
@@ -909,8 +919,14 @@ function KnowledgeView({ searchQuery }: { searchQuery?: string }) {
     
     setIsUploading(true);
     try {
-      await uploadKnowledge(file);
-      queryClient.invalidateQueries({ queryKey: ["knowledge"] });
+      const res = await uploadKnowledge(file);
+      if (res.summary && res.summary.includes("Mock mode")) {
+        queryClient.setQueryData(["knowledge", searchQuery], (old: any) => {
+          return [res, ...(old || [])];
+        });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["knowledge"] });
+      }
     } catch (err) {
       alert(err);
     } finally {
@@ -926,7 +942,18 @@ function KnowledgeView({ searchQuery }: { searchQuery?: string }) {
     try {
       const res = await syncJDIH();
       alert(`Sinkronisasi berhasil! ${res.synced_count} dokumen JDIH baru ditambahkan.`);
-      queryClient.invalidateQueries({ queryKey: ["knowledge"] });
+      if (res.message && res.message.includes("Mock mode")) {
+        queryClient.setQueryData(["knowledge", searchQuery], (old: any) => {
+          const mockDocs = [
+            { id: `mock-${Date.now()}-1`, title: "Perda Tangsel No. 3 Tahun 2023 tentang Rencana Tata Ruang", document_type: "Peraturan Daerah", tags: ["Tata Ruang", "Pembangunan"], summary: "Mengatur zonasi wilayah, kawasan lindung, dan tata ruang publik di Tangerang Selatan.", chunk_count: 45 },
+            { id: `mock-${Date.now()}-2`, title: "Perwal Tangsel No. 12 Tahun 2024 tentang Pengelolaan Sampah", document_type: "Peraturan Wali Kota", tags: ["Lingkungan", "Sampah"], summary: "SOP pengelolaan sampah terpadu dari hulu ke hilir serta sanksi pelanggaran.", chunk_count: 28 },
+            { id: `mock-${Date.now()}-3`, title: "SK Wali Kota tentang Tim Pengawasan Terpadu", document_type: "Surat Keputusan", tags: ["Pengawasan", "Tim"], summary: "Pembentukan tim koordinasi untuk pengawasan pembangunan dan tata ruang.", chunk_count: 12 }
+          ];
+          return [...mockDocs, ...(old || [])];
+        });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["knowledge"] });
+      }
     } catch (err) {
       alert(err);
     } finally {
