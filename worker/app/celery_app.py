@@ -16,4 +16,13 @@ celery_app.conf.task_default_queue = "wasdal"
 celery_app.conf.task_routes = {
     "worker.app.tasks.process_intake": {"queue": "wasdal"},
     "worker.app.tasks.process_meeting": {"queue": "wasdal"},
+    "worker.app.tasks.run_sync_jdih": {"queue": "wasdal"},
+}
+
+from celery.schedules import crontab
+celery_app.conf.beat_schedule = {
+    "sync-jdih-midnight": {
+        "task": "worker.app.tasks.run_sync_jdih",
+        "schedule": crontab(minute=0, hour=0),
+    },
 }

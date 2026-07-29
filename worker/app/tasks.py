@@ -52,3 +52,14 @@ def send_notification(case_id: str, agency: str, title: str) -> dict:
     print(f"Mengirim notifikasi ke OPD {agency} untuk kasus {case_id}: {title}")
     # Jika API WA / Email tersedia, lakukan HTTP request ke provider di sini
     return {"status": "sent", "agency": agency, "case_id": case_id}
+
+@celery_app.task(name="worker.app.tasks.run_sync_jdih")
+def run_sync_jdih() -> dict:
+    import asyncio
+    from backend.app.services.jdih_scraper import sync_jdih_documents
+    
+    print("Memulai sinkronisasi otomatis JDIH harian...")
+    with SessionLocal() as db:
+        synced = asyncio.run(sync_jdih_documents(db))
+    print(f"Sinkronisasi selesai! {synced} dokumen baru ditambahkan.")
+    return {"status": "success", "synced_count": synced}

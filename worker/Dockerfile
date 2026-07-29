@@ -17,4 +17,4 @@ COPY worker /app/worker
 
 WORKDIR /app
 
-CMD ["celery", "-A", "worker.app.celery_app", "worker", "--loglevel=INFO", "-Q", "wasdal"]
+CMD ["celery", "-A", "worker.app.celery_app", "worker", "--beat", "--loglevel=INFO", "-Q", "wasdal"]
