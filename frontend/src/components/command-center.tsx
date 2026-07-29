@@ -373,6 +373,67 @@ function IntakeView() {
   const [createCase, setCreateCase] = useState(true);
   const [attachments, setAttachments] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [isRecording, setIsRecording] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<BlobPart[]>([]);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        await uploadToTranscribe(audioBlob, "recording.webm");
+        stream.getTracks().forEach((track) => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      alert("Gagal mengakses mikrofon: " + err);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const uploadToTranscribe = async (fileOrBlob: Blob | File, filename: string) => {
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", fileOrBlob, filename);
+      
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001/api/v1";
+      const res = await fetch(`${API_URL}/meetings/transcribe`, {
+        method: "POST",
+        body: formData
+      });
+      
+      if (!res.ok) {
+        const errorText = await res.text().catch(() => "Unknown error");
+        throw new Error(`Gagal mentranskrip audio: ${res.status} - ${errorText}`);
+      }
+      const data = await res.json();
+      setRawText((prev) => prev + (prev ? " " : "") + data.text);
+    } catch (err) {
+      alert("Terjadi kesalahan: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const intakeMutation = useMutation<IntakeResult, Error, { text: string; atts: string[] }>({
     mutationFn: ({ text, atts }) => runIntake(text, createCase, atts),
@@ -436,9 +497,26 @@ function IntakeView() {
             <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>
               <Upload size={16} /> Foto
             </Button>
-            <Button disabled={intakeMutation.isPending} onClick={() => intakeMutation.mutate({ text: rawText, atts: attachments })}>
+            
+            <Button 
+              variant={isRecording ? "danger" : "secondary"} 
+              onClick={isRecording ? stopRecording : startRecording}
+              disabled={isUploading}
+            >
+              {isRecording ? (
+                <>
+                  <Square size={16} /> Stop Rekam
+                </>
+              ) : (
+                <>
+                  <Mic size={16} /> Rekam Suara
+                </>
+              )}
+            </Button>
+
+            <Button disabled={intakeMutation.isPending || isUploading} onClick={() => intakeMutation.mutate({ text: rawText, atts: attachments })}>
               <Send size={16} />
-              Proses Intake
+              {isUploading ? "Transcribing..." : "Proses Intake"}
             </Button>
           </div>
         </div>
