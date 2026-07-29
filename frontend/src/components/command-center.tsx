@@ -942,18 +942,7 @@ function KnowledgeView({ searchQuery }: { searchQuery?: string }) {
     try {
       const res = await syncJDIH();
       alert(`Sinkronisasi berhasil! ${res.synced_count} dokumen JDIH baru ditambahkan.`);
-      if (res.message && res.message.includes("Mock mode")) {
-        queryClient.setQueryData(["knowledge", searchQuery], (old: any) => {
-          const mockDocs = [
-            { id: `mock-${Date.now()}-1`, title: "Perda Tangsel No. 3 Tahun 2023 tentang Rencana Tata Ruang", document_type: "Peraturan Daerah", tags: ["Tata Ruang", "Pembangunan"], summary: "Mengatur zonasi wilayah, kawasan lindung, dan tata ruang publik di Tangerang Selatan.", chunk_count: 45 },
-            { id: `mock-${Date.now()}-2`, title: "Perwal Tangsel No. 12 Tahun 2024 tentang Pengelolaan Sampah", document_type: "Peraturan Wali Kota", tags: ["Lingkungan", "Sampah"], summary: "SOP pengelolaan sampah terpadu dari hulu ke hilir serta sanksi pelanggaran.", chunk_count: 28 },
-            { id: `mock-${Date.now()}-3`, title: "SK Wali Kota tentang Tim Pengawasan Terpadu", document_type: "Surat Keputusan", tags: ["Pengawasan", "Tim"], summary: "Pembentukan tim koordinasi untuk pengawasan pembangunan dan tata ruang.", chunk_count: 12 }
-          ];
-          return [...mockDocs, ...(old || [])];
-        });
-      } else {
-        queryClient.invalidateQueries({ queryKey: ["knowledge"] });
-      }
+      queryClient.invalidateQueries({ queryKey: ["knowledge"] });
     } catch (err) {
       alert(err);
     } finally {

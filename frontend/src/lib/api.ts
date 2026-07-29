@@ -92,13 +92,6 @@ export async function syncJDIH() {
   });
   
   if (!res.ok) {
-    if (res.status === 405) {
-      console.warn("Backend still deploying, using mock sync...");
-      return {
-        message: "Berhasil melakukan sinkronisasi dengan JDIH Tangsel (Mock mode)",
-        synced_count: 3
-      };
-    }
     const errorText = await res.text().catch(() => "Unknown error");
     throw new Error(`Gagal sinkronisasi JDIH: ${res.status} - ${errorText}`);
   }
