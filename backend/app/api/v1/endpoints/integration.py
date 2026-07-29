@@ -8,7 +8,10 @@ from app.core.config import get_settings
 from app.schemas.integration import ExternalReportCreate
 from app.schemas.cases import CaseCreate
 from app.services.case_service import CaseService
+from app.services.case_service import CaseService
 from app.services.ai_orchestrator import AIOrchestrator
+from app.services.lapor_service import fetch_lapor_complaints
+import uuid
 
 router = APIRouter()
 
@@ -72,4 +75,33 @@ def receive_external_report(
         "message": "Report received, analyzed, and saved successfully.",
         "case_id": case.id,
         "case_number": case.number
+    }
+
+
+@router.post("/lapor/sync", response_model=dict)
+async def sync_lapor(db: Session = Depends(get_db)):
+    """
+    Simulates fetching new complaints from SP4N-LAPOR and processing them via AI Intake.
+    """
+    complaints_texts = await fetch_lapor_complaints()
+    
+    synced_cases = []
+    for text in complaints_texts:
+        # Mock payload based on SP4N LAPOR structure
+        payload = ExternalReportCreate(
+            report_id=f"LAPOR-{str(uuid.uuid4())[:8].upper()}",
+            title=f"Aduan Warga (SP4N LAPOR) - {text[:20]}...",
+            description=text,
+            source="LAPOR!",
+            location_name="Tangerang Selatan",
+            reporter_name="Warga Anonim"
+        )
+        # Re-use existing webhook logic
+        result = receive_external_report(payload=payload, db=db)
+        synced_cases.append(result["case_number"])
+        
+    return {
+        "status": "success",
+        "message": f"Berhasil sinkronisasi {len(synced_cases)} aduan dari SP4N LAPOR!",
+        "synced_cases": synced_cases
     }

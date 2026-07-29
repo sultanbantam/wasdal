@@ -30,7 +30,7 @@ import {
   Upload,
   RefreshCw
 } from "lucide-react";
-import { getCases, getDashboard, runIntake, runMeeting, getMeetings, updateCaseStatus, getKnowledge, uploadKnowledge, syncJDIH } from "@/lib/api";
+import { getCases, getDashboard, runIntake, runMeeting, getMeetings, updateCaseStatus, getKnowledge, uploadKnowledge, syncJDIH, syncLapor } from "@/lib/api";
 import { formatNumber, priorityTone } from "@/lib/utils";
 import type { CaseItem, DashboardData, IntakeResult, MeetingResult } from "@/types/wasdal";
 import { Badge, Button, Panel, ProgressBar, SectionTitle } from "@/components/ui";
@@ -268,7 +268,12 @@ function CaseTable({ cases }: { cases: CaseItem[] }) {
         <tbody>
           {cases.map((item) => (
             <tr key={item.id}>
-              <td className="border-b border-border py-3 text-xs font-medium text-muted-foreground">{item.number}</td>
+              <td className="border-b border-border py-3 text-xs font-medium text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  {item.number}
+                  {item.source === "LAPOR!" && <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px] px-1.5 py-0">LAPOR!</Badge>}
+                </div>
+              </td>
               <td className="border-b border-border py-3 pr-4">
                 <div className="max-w-[320px] truncate font-medium">{item.title}</div>
                 <div className="mt-1 text-xs text-muted-foreground">{item.category} - {item.location_name}</div>
@@ -335,7 +340,10 @@ function CasesView({ cases }: { cases: CaseItem[] }) {
               {column.items.map((item) => (
                 <article key={item.id} className="rounded-md border border-border p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <span className="text-xs font-medium text-muted-foreground">{item.number}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-muted-foreground">{item.number}</span>
+                      {item.source === "LAPOR!" && <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px] px-1.5 py-0">LAPOR!</Badge>}
+                    </div>
                     <Badge className={priorityTone(item.priority)}>{item.priority}</Badge>
                   </div>
                   <h4 className="text-sm font-semibold leading-5">{item.title}</h4>
@@ -374,6 +382,7 @@ function IntakeView() {
   const [createCase, setCreateCase] = useState(true);
   const [attachments, setAttachments] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isSyncingLapor, setIsSyncingLapor] = useState(false);
   
   const [isRecording, setIsRecording] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -460,11 +469,31 @@ function IntakeView() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const handleSyncLapor = async () => {
+    setIsSyncingLapor(true);
+    try {
+      const res = await syncLapor();
+      alert(`${res.message}`);
+      queryClient.invalidateQueries({ queryKey: ["cases"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    } catch (err) {
+      alert(err);
+    } finally {
+      setIsSyncingLapor(false);
+    }
+  };
+
   const result = intakeMutation.data;
   return (
     <div className="grid gap-4 xl:grid-cols-[0.88fr_1.12fr]">
       <Panel>
-        <SectionTitle title="AI Intake" meta="Antrean laporan masuk" />
+        <div className="flex items-center justify-between mb-4">
+          <SectionTitle title="AI Intake" meta="Antrean laporan masuk" />
+          <Button variant="ghost" className="border border-border" onClick={handleSyncLapor} disabled={isSyncingLapor || isUploading || intakeMutation.isPending}>
+            <RefreshCw size={16} className={isSyncingLapor ? "animate-spin" : ""} />
+            {isSyncingLapor ? "Menarik Data LAPOR..." : "Tarik Data SP4N LAPOR"}
+          </Button>
+        </div>
         <textarea
           value={rawText}
           onChange={(event) => setRawText(event.target.value)}
