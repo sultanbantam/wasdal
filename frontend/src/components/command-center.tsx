@@ -942,17 +942,7 @@ function KnowledgeView({ searchQuery }: { searchQuery?: string }) {
     try {
       const res = await syncJDIH();
       alert(`Sinkronisasi berhasil! ${res.synced_count} dokumen JDIH baru ditambahkan.`);
-      if (res.message && res.message.includes("Mock mode")) {
-        queryClient.setQueryData(["knowledge", searchQuery], (old: any) => {
-          const mockDocs = [
-            { id: `mock-${Date.now()}-1`, title: "Peraturan Daerah Kota Tangerang Selatan Nomor 1 Tahun 2022", document_type: "Peraturan Daerah", tags: ["Hukum", "Kelembagaan"], summary: "Mengatur mengenai pembentukan dan susunan perangkat daerah di lingkungan Pemkot Tangsel.", chunk_count: 34 },
-            { id: `mock-${Date.now()}-2`, title: "Rencana Tata Ruang Wilayah Kota Tangerang Selatan 2024", document_type: "Peraturan Daerah", tags: ["Tata Ruang", "Pembangunan"], summary: "Mengatur zonasi wilayah, kawasan lindung, dan tata ruang publik secara detail.", chunk_count: 56 },
-          ];
-          return [...mockDocs, ...(old || [])];
-        });
-      } else {
-        queryClient.invalidateQueries({ queryKey: ["knowledge"] });
-      }
+      queryClient.invalidateQueries({ queryKey: ["knowledge"] });
     } catch (err) {
       alert(err);
     } finally {
