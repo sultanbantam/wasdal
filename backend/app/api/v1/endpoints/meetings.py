@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 import tempfile
@@ -53,8 +53,14 @@ async def transcribe_audio(file: UploadFile = File(...)) -> dict:
             os.remove(tmp_path)
 
 @router.get("")
-def list_meetings(db: Session = Depends(get_db)) -> list[dict]:
-    records = db.scalars(select(MeetingRecord).order_by(MeetingRecord.created_at.desc())).all()
+def list_meetings(q: str | None = Query(default=None), db: Session = Depends(get_db)) -> list[dict]:
+    stmt = select(MeetingRecord)
+    if q:
+        stmt = stmt.where(
+            (MeetingRecord.title.ilike(f"%{q}%")) |
+            (MeetingRecord.summary.ilike(f"%{q}%"))
+        )
+    records = db.scalars(stmt.order_by(MeetingRecord.created_at.desc())).all()
     return [
         {
             "id": item.id,

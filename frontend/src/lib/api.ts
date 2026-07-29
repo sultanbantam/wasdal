@@ -15,8 +15,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-export function getDashboard() {
-  return request<DashboardData>("/dashboard");
+export function getDashboard(query?: string) {
+  const url = query ? `/dashboard?q=${encodeURIComponent(query)}` : "/dashboard";
+  return request<DashboardData>(url);
 }
 
 export async function getCases(query?: string) {
@@ -46,6 +47,29 @@ export function runMeeting(title: string, transcript: string, saveRecord: boolea
   });
 }
 
-export function getMeetings() {
-  return request<MeetingRecord[]>("/meetings");
+export function getMeetings(query?: string) {
+  const url = query ? `/meetings?q=${encodeURIComponent(query)}` : "/meetings";
+  return request<MeetingRecord[]>(url);
+}
+
+export function getKnowledge(query?: string) {
+  const url = query ? `/knowledge?q=${encodeURIComponent(query)}` : "/knowledge";
+  return request<any[]>(url);
+}
+
+export async function uploadKnowledge(file: File) {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001/api/v1";
+  const formData = new FormData();
+  formData.append("file", file);
+  
+  const res = await fetch(`${API_URL}/knowledge/upload`, {
+    method: "POST",
+    body: formData
+  });
+  
+  if (!res.ok) {
+    const errorText = await res.text().catch(() => "Unknown error");
+    throw new Error(`Gagal mengunggah dokumen: ${res.status} - ${errorText}`);
+  }
+  return res.json();
 }

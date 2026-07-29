@@ -9,5 +9,5 @@ router = APIRouter()
 
 
 @router.get("", response_model=DashboardResponse)
-def dashboard(db: Session = Depends(get_db)) -> DashboardResponse:
-    return DashboardService(db).build()
+def dashboard(q: str | None = None, db: Session = Depends(get_db)) -> DashboardResponse:
+    return DashboardService(db).build(query=q)

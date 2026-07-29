@@ -29,7 +29,7 @@ import {
   Square,
   Upload
 } from "lucide-react";
-import { getCases, getDashboard, runIntake, runMeeting, getMeetings, updateCaseStatus } from "@/lib/api";
+import { getCases, getDashboard, runIntake, runMeeting, getMeetings, updateCaseStatus, getKnowledge, uploadKnowledge } from "@/lib/api";
 import { formatNumber, priorityTone } from "@/lib/utils";
 import type { CaseItem, DashboardData, IntakeResult, MeetingResult } from "@/types/wasdal";
 import { Badge, Button, Panel, ProgressBar, SectionTitle } from "@/components/ui";
@@ -55,7 +55,7 @@ export function CommandCenter() {
   const [dark, setDark] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   
-  const dashboardQuery = useQuery({ queryKey: ["dashboard"], queryFn: getDashboard });
+  const dashboardQuery = useQuery({ queryKey: ["dashboard", searchQuery], queryFn: () => getDashboard(searchQuery) });
   const casesQuery = useQuery({ queryKey: ["cases", searchQuery], queryFn: () => getCases(searchQuery) });
 
   useEffect(() => {
@@ -153,8 +153,8 @@ export function CommandCenter() {
           {active === "cases" ? <CasesView cases={cases} /> : null}
           {active === "intake" ? <IntakeView /> : null}
           {active === "meeting" ? <MeetingView cases={cases} /> : null}
-          {active === "archive" ? <MeetingArchiveView /> : null}
-          {active === "knowledge" ? <KnowledgeView /> : null}
+          {active === "archive" ? <MeetingArchiveView searchQuery={searchQuery} /> : null}
+          {active === "knowledge" ? <KnowledgeView searchQuery={searchQuery} /> : null}
         </main>
       </div>
     </div>
@@ -779,10 +779,10 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
   );
 }
 
-function MeetingArchiveView() {
+function MeetingArchiveView({ searchQuery }: { searchQuery?: string }) {
   const { data: meetings, isLoading } = useQuery({
-    queryKey: ["meetings"],
-    queryFn: getMeetings
+    queryKey: ["meetings", searchQuery],
+    queryFn: () => getMeetings(searchQuery)
   });
 
   if (isLoading) {
@@ -862,36 +862,84 @@ function DecisionLine({ title, value }: { title: string; value: string }) {
   );
 }
 
-function KnowledgeView() {
-  const docs = [
-    { title: "SOP Rapat Wasdal dan Eskalasi Lintas OPD", type: "SOP", chunks: 12, tags: ["rapat", "eskalasi"] },
-    { title: "RPJMD - Prioritas Pembangunan Daerah", type: "RPJMD", chunks: 24, tags: ["pembangunan", "indikator"] },
-    { title: "Standar Harga dan DPA", type: "Dokumen Pemerintah", chunks: 18, tags: ["anggaran", "dpa"] }
-  ];
+function KnowledgeView({ searchQuery }: { searchQuery?: string }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
+  const [isUploading, setIsUploading] = useState(false);
+
+  const { data: docs = [], isLoading } = useQuery({
+    queryKey: ["knowledge", searchQuery],
+    queryFn: () => getKnowledge(searchQuery)
+  });
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setIsUploading(true);
+    try {
+      await uploadKnowledge(file);
+      queryClient.invalidateQueries({ queryKey: ["knowledge"] });
+    } catch (err) {
+      alert(err);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
   return (
-    <div className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
+    <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
       <Panel>
-        <SectionTitle title="Knowledge Base" meta="UU, PP, Permen, Perda, SOP, RPJMD, RKPD" />
-        <div className="space-y-3">
-          {docs.map((doc) => (
-            <div key={doc.title} className="rounded-md border border-border p-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0 font-medium">{doc.title}</div>
-                <Badge className="border-border bg-muted text-muted-foreground">{doc.type}</Badge>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {doc.tags.map((tag) => (
-                  <Badge key={tag} className="border-primary/20 bg-primary/10 text-primary">{tag}</Badge>
-                ))}
-              </div>
-              <p className="mt-2 text-xs text-muted-foreground">{doc.chunks} chunk siap untuk RAG.</p>
-            </div>
-          ))}
+        <div className="flex items-center justify-between mb-4">
+          <SectionTitle title="Knowledge Base" meta="Dokumen yang menjadi referensi RAG AI" />
+          
+          <div>
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="application/pdf,text/plain,text/csv,text/markdown"
+              onChange={handleFileUpload}
+            />
+            <Button variant="primary" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+              <Upload size={16} />
+              {isUploading ? "Memproses AI..." : "Unggah PDF"}
+            </Button>
+          </div>
         </div>
+
+        {isLoading ? (
+          <div className="p-4 text-center text-sm text-muted-foreground">Memuat dokumen...</div>
+        ) : docs.length === 0 ? (
+          <div className="p-8 text-center text-sm text-muted-foreground border border-dashed border-border rounded-md">
+            Belum ada dokumen yang diunggah atau tidak ada hasil pencarian.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {docs.map((doc: any) => (
+              <div key={doc.id} className="rounded-md border border-border p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 font-medium">{doc.title}</div>
+                  <Badge className="border-border bg-muted text-muted-foreground">{doc.document_type}</Badge>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {doc.tags.map((tag: string) => (
+                    <Badge key={tag} className="border-primary/20 bg-primary/10 text-primary">{tag}</Badge>
+                  ))}
+                </div>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{doc.summary}</p>
+                <p className="mt-2 text-xs text-muted-foreground">{doc.chunk_count} chunk(s) siap untuk RAG.</p>
+              </div>
+            ))}
+          </div>
+        )}
       </Panel>
       <Panel>
-        <SectionTitle title="Analisis Lintas Data" meta="Regulasi, kasus, lokasi, anggaran, dan histori" />
-        <div className="space-y-3">
+        <SectionTitle title="Analisis Lintas Data" meta="Insight otomatis (Mockup)" />
+        <div className="space-y-3 mt-4">
           {[
             "Kasus drainase berulang berkorelasi dengan titik pelayanan publik dan perlu paket normalisasi prioritas.",
             "Keterlambatan perizinan investasi perlu keputusan lintas OPD sebelum berdampak pada realisasi investasi.",

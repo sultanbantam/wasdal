@@ -12,8 +12,16 @@ class DashboardService:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def build(self) -> dict:
+    def build(self, query: str | None = None) -> dict:
         active_stmt = select(Case).where(Case.deleted_at.is_(None))
+        if query:
+            active_stmt = active_stmt.where(
+                (Case.title.ilike(f"%{query}%")) |
+                (Case.number.ilike(f"%{query}%")) |
+                (Case.agency.ilike(f"%{query}%")) |
+                (Case.location_name.ilike(f"%{query}%")) |
+                (Case.description.ilike(f"%{query}%"))
+            )
         cases = list(self.db.scalars(active_stmt).all())
         total = len(cases)
         new_cases = sum(1 for case in cases if case.status == "New")
