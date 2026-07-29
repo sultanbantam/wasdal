@@ -1,33 +1,27 @@
-import { mockCases, mockDashboard } from "@/lib/mock-data";
 import type { CaseItem, DashboardData, IntakeResult, MeetingResult, MeetingRecord } from "@/types/wasdal";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
-async function request<T>(path: string, init?: RequestInit, fallback?: T): Promise<T> {
-  try {
-    const response = await fetch(`${API_URL}${path}`, {
-      ...init,
-      headers: {
-        "Content-Type": "application/json",
-        ...(init?.headers ?? {})
-      },
-      cache: "no-store"
-    });
-    if (!response.ok) throw new Error(`Request failed: ${response.status}`);
-    return (await response.json()) as T;
-  } catch (error) {
-    if (fallback !== undefined) return fallback;
-    throw error;
-  }
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_URL}${path}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {})
+    },
+    cache: "no-store"
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return (await response.json()) as T;
 }
 
 export function getDashboard() {
-  return request<DashboardData>("/dashboard", undefined, mockDashboard);
+  return request<DashboardData>("/dashboard");
 }
 
 export async function getCases(query?: string) {
   const url = query ? `/cases?size=50&q=${encodeURIComponent(query)}` : "/cases?size=50";
-  const result = await request<{ items: CaseItem[] }>(url, undefined, { items: mockCases });
+  const result = await request<{ items: CaseItem[] }>(url);
   return result.items;
 }
 

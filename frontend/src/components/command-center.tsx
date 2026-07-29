@@ -495,8 +495,6 @@ function IntakeView() {
 
 function MeetingView({ cases }: { cases: CaseItem[] }) {
   const priorityCases = cases.filter((item) => item.priority === "Critical" || item.priority === "High");
-  const dummyTranscript = "Rapat koordinasi membahas genangan air di sekitar pasar induk yang rusak berat. Bapak Sekda memutuskan bahwa Dinas PUPR harus segera melakukan perbaikan darurat akses pasar induk tersebut. Sebagai action item pertama, Kepala Dinas PUPR ditugaskan untuk melakukan validasi lapangan dan dokumentasi titik kerusakan, dengan tenggat waktu hari ini (H+0). Selanjutnya, Tim teknis PUPR akan melakukan perbaikan sementara selambatnya 3 hari ke depan (H+3). Terakhir, Bappeda dan PUPR diminta menyusun rencana permanen dalam waktu dua minggu (H+14). Rapat ditutup.";
-  
   const [transcriptText, setTranscriptText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -557,9 +555,7 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
       const data = await res.json();
       setTranscriptText((prev) => prev + (prev ? " " : "") + data.text);
     } catch (err) {
-      console.warn("Menggunakan simulasi transkripsi karena API error:", err);
-      // Fallback simulasi transkripsi untuk testing UI
-      setTranscriptText((prev) => prev + (prev ? " " : "") + "Ini adalah simulasi hasil transkripsi audio dari rapat Wasdal.");
+      alert("Terjadi kesalahan: " + (err instanceof Error ? err.message : String(err)));
     } finally {
       setIsUploading(false);
     }
@@ -573,7 +569,7 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
   
   const queryClient = useQueryClient();
   const meetingMutation = useMutation<MeetingResult, Error, void>({
-    mutationFn: () => runMeeting("Rapat Koordinasi", transcriptText || dummyTranscript, saveRecord),
+    mutationFn: () => runMeeting("Rapat Koordinasi", transcriptText, saveRecord),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cases"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
