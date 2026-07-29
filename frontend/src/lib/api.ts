@@ -73,3 +73,16 @@ export async function uploadKnowledge(file: File) {
   }
   return res.json();
 }
+
+export async function syncJDIH() {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001/api/v1";
+  const res = await fetch(`${API_URL}/knowledge/sync-jdih`, {
+    method: "POST"
+  });
+  
+  if (!res.ok) {
+    const errorText = await res.text().catch(() => "Unknown error");
+    throw new Error(`Gagal sinkronisasi JDIH: ${res.status} - ${errorText}`);
+  }
+  return res.json();
+}

@@ -10,6 +10,7 @@ from app.db.session import get_db
 from app.models import KnowledgeDocument
 from app.schemas import KnowledgeCreate, KnowledgeRead
 from app.core.config import get_settings
+from app.services.jdih_scraper import sync_jdih_documents
 
 router = APIRouter()
 
@@ -93,6 +94,15 @@ async def upload_knowledge(file: UploadFile = File(...), db: Session = Depends(g
     finally:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
+
+
+@router.post("/sync-jdih", status_code=status.HTTP_200_OK)
+async def sync_jdih(db: Session = Depends(get_db)):
+    try:
+        synced_count = await sync_jdih_documents(db)
+        return {"message": "Berhasil melakukan sinkronisasi dengan JDIH Tangsel", "synced_count": synced_count}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Gagal sinkronisasi JDIH: {str(e)}")
 
 
 @router.get("/{document_id}", response_model=KnowledgeRead)

@@ -27,9 +27,10 @@ import {
   UsersRound,
   Mic,
   Square,
-  Upload
+  Upload,
+  RefreshCw
 } from "lucide-react";
-import { getCases, getDashboard, runIntake, runMeeting, getMeetings, updateCaseStatus, getKnowledge, uploadKnowledge } from "@/lib/api";
+import { getCases, getDashboard, runIntake, runMeeting, getMeetings, updateCaseStatus, getKnowledge, uploadKnowledge, syncJDIH } from "@/lib/api";
 import { formatNumber, priorityTone } from "@/lib/utils";
 import type { CaseItem, DashboardData, IntakeResult, MeetingResult } from "@/types/wasdal";
 import { Badge, Button, Panel, ProgressBar, SectionTitle } from "@/components/ui";
@@ -866,6 +867,7 @@ function KnowledgeView({ searchQuery }: { searchQuery?: string }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const [isUploading, setIsUploading] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const { data: docs = [], isLoading } = useQuery({
     queryKey: ["knowledge", searchQuery],
@@ -890,13 +892,30 @@ function KnowledgeView({ searchQuery }: { searchQuery?: string }) {
     }
   };
 
+  const handleSyncJDIH = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await syncJDIH();
+      alert(`Sinkronisasi berhasil! ${res.synced_count} dokumen JDIH baru ditambahkan.`);
+      queryClient.invalidateQueries({ queryKey: ["knowledge"] });
+    } catch (err) {
+      alert(err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   return (
     <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
       <Panel>
         <div className="flex items-center justify-between mb-4">
           <SectionTitle title="Knowledge Base" meta="Dokumen yang menjadi referensi RAG AI" />
           
-          <div>
+          <div className="flex gap-2">
+            <Button variant="ghost" className="border border-border" onClick={handleSyncJDIH} disabled={isSyncing || isUploading}>
+              <RefreshCw size={16} className={isSyncing ? "animate-spin" : ""} />
+              {isSyncing ? "Menyinkronkan JDIH..." : "Sinkronisasi JDIH"}
+            </Button>
             <input
               type="file"
               ref={fileInputRef}
@@ -904,7 +923,7 @@ function KnowledgeView({ searchQuery }: { searchQuery?: string }) {
               accept="application/pdf,text/plain,text/csv,text/markdown"
               onChange={handleFileUpload}
             />
-            <Button variant="primary" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+            <Button variant="primary" onClick={() => fileInputRef.current?.click()} disabled={isUploading || isSyncing}>
               <Upload size={16} />
               {isUploading ? "Memproses AI..." : "Unggah PDF"}
             </Button>
