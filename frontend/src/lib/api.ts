@@ -47,5 +47,5 @@ export function runMeeting(title: string, transcript: string, saveRecord: boolea
 }
 
 export function getMeetings() {
-  return request<MeetingRecord[]>("/meetings", undefined, []);
+  return request<MeetingRecord[]>("/meetings");
 }
