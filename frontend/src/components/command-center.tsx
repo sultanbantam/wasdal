@@ -625,54 +625,79 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
             </div>
           )}
           
-          <div className="mt-6 flex flex-col gap-3">
-            <div className="grid grid-cols-2 gap-3">
+          <div className="mt-6 flex flex-col gap-4">
+            <div className="rounded-md border border-border p-4 bg-muted/30">
+              <div className="mb-3 text-sm font-medium">Langkah 1: Masukkan Sumber Rapat</div>
+              <p className="mb-4 text-xs text-muted-foreground">
+                Pilih salah satu metode di bawah ini untuk menghasilkan transkrip rapat.
+              </p>
+              
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <Button 
+                    variant={isRecording ? "danger" : "secondary"} 
+                    onClick={isRecording ? stopRecording : startRecording}
+                    className="w-full"
+                  >
+                    {isRecording ? (
+                      <span className="flex items-center gap-2">
+                        <Square size={16} /> Stop Rekam
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <Mic size={16} /> Rekam Suara
+                      </span>
+                    )}
+                  </Button>
+                  <span className="text-[10px] text-center text-muted-foreground">Gunakan mic perangkat Anda</span>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept="audio/*,application/pdf,text/plain"
+                    onChange={handleFileUpload}
+                  />
+                  <Button variant="secondary" onClick={() => fileInputRef.current?.click()} disabled={isUploading || isRecording} className="w-full">
+                    <span className="flex items-center gap-2">
+                      <Upload size={16} /> {isUploading ? "Uploading..." : "Unggah Dokumen"}
+                    </span>
+                  </Button>
+                  <span className="text-[10px] text-center text-muted-foreground">Mendukung PDF, Audio, dan Teks</span>
+                </div>
+              </div>
+              
+              {transcriptText && (
+                <div className="mt-4 p-3 bg-background rounded border border-border text-xs text-muted-foreground">
+                  <div className="font-medium text-foreground mb-1">Status Transkripsi:</div>
+                  <div className="line-clamp-2">{transcriptText}</div>
+                </div>
+              )}
+            </div>
+            
+            <div className="rounded-md border border-border p-4 bg-muted/30">
+              <div className="mb-3 text-sm font-medium">Langkah 2: Proses Notulen</div>
               <Button 
-                variant={isRecording ? "danger" : "secondary"} 
-                onClick={isRecording ? stopRecording : startRecording}
+                className="w-full" 
+                variant="primary" 
+                onClick={() => meetingMutation.mutate()}
+                disabled={meetingMutation.isPending || isRecording || isUploading || !transcriptText}
               >
-                {isRecording ? (
+                {meetingMutation.isPending ? (
                   <span className="flex items-center gap-2">
-                    <Square size={16} /> Stop Rekam
+                    <Bot size={16} className="animate-pulse" />
+                    Generating AI Minutes...
                   </span>
                 ) : (
                   <span className="flex items-center gap-2">
-                    <Mic size={16} /> Mulai Rekam
+                    <FileText size={16} />
+                    Generate Notulen
                   </span>
                 )}
               </Button>
-              <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                accept="audio/*,application/pdf,text/plain"
-                onChange={handleFileUpload}
-              />
-              <Button variant="secondary" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
-                <span className="flex items-center gap-2">
-                  <Upload size={16} /> {isUploading ? "Uploading..." : "Unggah Materi"}
-                </span>
-              </Button>
             </div>
-            
-            <Button 
-              className="w-full" 
-              variant="primary" 
-              onClick={() => meetingMutation.mutate()}
-              disabled={meetingMutation.isPending || isRecording || isUploading}
-            >
-              {meetingMutation.isPending ? (
-                <span className="flex items-center gap-2">
-                  <Bot size={16} className="animate-pulse" />
-                  Generating AI Minutes...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <FileText size={16} />
-                  Generate Notulen
-                </span>
-              )}
-            </Button>
           </div>
         </Panel>
       </div>
