@@ -21,8 +21,8 @@ celery_app.conf.task_routes = {
 
 from celery.schedules import crontab
 celery_app.conf.beat_schedule = {
-    "sync-jdih-midnight": {
+    "sync-jdih-hourly": {
         "task": "worker.app.tasks.run_sync_jdih",
-        "schedule": crontab(minute=0, hour=0),
+        "schedule": crontab(minute=0),  # Berjalan setiap awal jam (menit ke-0), 24x sehari
     },
 }
