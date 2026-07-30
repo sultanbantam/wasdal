@@ -3,7 +3,6 @@ from __future__ import annotations
 from agents.wasdal_agents import WasdalAgentGraph
 from agents.wasdal_agents.openai_graph import OpenAIWasdalAgentGraph
 from app.core.config import get_settings
-from .prompts import INTAKE_SYSTEM_PROMPT, MEETING_SYSTEM_PROMPT
 from .ai_shield import AITackShield
 
 class AIOrchestrator:
