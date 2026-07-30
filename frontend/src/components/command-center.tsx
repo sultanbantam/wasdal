@@ -151,7 +151,29 @@ export function CommandCenter() {
               </Button>
             ))}
           </div>
-          {active === "dashboard" && dashboard ? <DashboardView dashboard={dashboard} cases={cases} /> : null}
+          {active === "dashboard" ? (
+            dashboard ? (
+              <DashboardView dashboard={dashboard} cases={cases} />
+            ) : dashboardQuery.isError ? (
+              <div className="flex min-h-[400px] flex-col items-center justify-center rounded-lg border border-border bg-muted/50 p-6 text-center">
+                <Gauge size={32} className="mb-4 text-muted-foreground opacity-50" />
+                <h3 className="text-lg font-semibold">Gagal Terhubung ke Server</h3>
+                <p className="mt-2 text-sm text-muted-foreground max-w-md">
+                  Aplikasi tidak dapat menarik data riil dari VPS Contabo Anda. Pastikan server Backend sudah berjalan (Running) dan koneksi tidak terblokir.
+                </p>
+                <div className="mt-4 rounded bg-background p-3 text-xs text-danger border border-danger/20 font-mono">
+                  {dashboardQuery.error instanceof Error ? dashboardQuery.error.message : "Network Error"}
+                </div>
+              </div>
+            ) : (
+              <div className="flex min-h-[400px] items-center justify-center rounded-lg border border-border bg-muted/20">
+                <div className="flex flex-col items-center gap-3">
+                  <RefreshCw size={24} className="animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">Menghubungkan ke Server Wasdal...</p>
+                </div>
+              </div>
+            )
+          ) : null}
           {active === "cases" ? <CasesView cases={cases} /> : null}
           {active === "intake" ? <IntakeView /> : null}
           {active === "meeting" ? <MeetingView cases={cases} /> : null}
