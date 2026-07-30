@@ -1,7 +1,10 @@
 import type { CaseItem, DashboardData, IntakeResult, MeetingResult, MeetingRecord } from "@/types/wasdal";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
-
+// Gunakan API URL dari environment, tapi jika masih HTTP (IP biasa), paksa gunakan HTTPS Nginx Proxy Manager
+let API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://api-wasdal.bamboochain.id/api/v1";
+if (API_URL.startsWith("http://") && !API_URL.includes("localhost")) {
+  API_URL = "https://api-wasdal.bamboochain.id/api/v1";
+}
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     ...init,
@@ -58,7 +61,6 @@ export function getKnowledge(query?: string) {
 }
 
 export async function uploadKnowledge(file: File) {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001/api/v1";
   const formData = new FormData();
   formData.append("file", file);
   
@@ -86,7 +88,6 @@ export async function uploadKnowledge(file: File) {
 }
 
 export async function syncJDIH() {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001/api/v1";
   const res = await fetch(`${API_URL}/knowledge/sync-jdih`, {
     method: "POST"
   });
@@ -99,7 +100,6 @@ export async function syncJDIH() {
 }
 
 export async function syncLapor() {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001/api/v1";
   const res = await fetch(`${API_URL}/integration/lapor/sync`, {
     method: "POST"
   });
