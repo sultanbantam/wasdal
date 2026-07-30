@@ -40,7 +40,7 @@ const TacticalMap = dynamic(() => import("@/components/tactical-map").then((mod)
   loading: () => <div className="h-[360px] rounded-lg border border-border bg-muted" />
 });
 
-type ModuleKey = "dashboard" | "cases" | "intake" | "meeting" | "archive" | "knowledge";
+type ModuleKey = "dashboard" | "cases" | "intake" | "meeting" | "archive" | "knowledge" | "security";
 
 const modules: Array<{ key: ModuleKey; label: string; icon: typeof Gauge }> = [
   { key: "dashboard", label: "Command Center", icon: Gauge },
@@ -48,7 +48,8 @@ const modules: Array<{ key: ModuleKey; label: string; icon: typeof Gauge }> = [
   { key: "intake", label: "AI Intake", icon: Sparkles },
   { key: "meeting", label: "Meeting Mode", icon: UsersRound },
   { key: "archive", label: "Meeting Archive", icon: FileText },
-  { key: "knowledge", label: "Knowledge", icon: Layers }
+  { key: "knowledge", label: "Knowledge", icon: Layers },
+  { key: "security", label: "AI Security", icon: ShieldCheck }
 ];
 
 export function CommandCenter() {
@@ -156,8 +157,31 @@ export function CommandCenter() {
           {active === "meeting" ? <MeetingView cases={cases} /> : null}
           {active === "archive" ? <MeetingArchiveView searchQuery={searchQuery} /> : null}
           {active === "knowledge" ? <KnowledgeView searchQuery={searchQuery} /> : null}
+          {active === "security" ? <SecurityView /> : null}
         </main>
       </div>
+    </div>
+  );
+}
+
+function SecurityView() {
+  return (
+    <div className="flex flex-col h-[calc(100vh-6rem)] w-full rounded-lg border border-border overflow-hidden bg-black relative">
+      <div className="absolute top-0 left-0 w-full h-12 bg-black/80 backdrop-blur border-b border-border z-10 flex items-center justify-between px-4">
+        <div>
+          <h2 className="text-sm font-semibold text-emerald-400 flex items-center gap-2">
+            <ShieldCheck size={16} /> AITTACK SHIELD
+          </h2>
+        </div>
+        <div className="flex items-center gap-2">
+           <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">OJK/BI COMPLIANCE ACTIVE</Badge>
+        </div>
+      </div>
+      <iframe 
+        src="https://aittack.vercel.app/" 
+        className="w-full h-full pt-12 border-0"
+        title="Aittack Security Dashboard"
+      />
     </div>
   );
 }

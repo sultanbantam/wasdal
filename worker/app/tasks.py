@@ -63,3 +63,13 @@ def run_sync_jdih() -> dict:
         synced = asyncio.run(sync_jdih_documents(db))
     print(f"Sinkronisasi selesai! {synced} dokumen baru ditambahkan.")
     return {"status": "success", "synced_count": synced}
+
+@celery_app.task(name="worker.app.tasks.run_media_monitoring")
+def run_media_monitoring() -> dict:
+    import asyncio
+    from backend.app.services.media_scraper import run_media_monitoring_sync
+    
+    print("Memulai patroli Media Monitoring Tangsel...")
+    with SessionLocal() as db:
+        cases_created = asyncio.run(run_media_monitoring_sync(db))
+    return {"status": "success", "cases_created": cases_created}
