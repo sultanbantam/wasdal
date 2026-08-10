@@ -122,6 +122,15 @@ export function CommandCenter() {
                 </button>
               );
             })}
+            <div className="pt-4 mt-4 border-t border-border">
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-3">Kinerja Daerah</div>
+              <a href="/executive/mayor" className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted">
+                <Gauge size={17} /> Executive Dashboard
+              </a>
+              <a href="/executive/decision" className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted">
+                <ListChecks size={17} /> Decision Required
+              </a>
+            </div>
           </nav>
           <Panel className="mt-6">
             <SectionTitle title="AI Guardrails" meta="Rekomendasi tidak menutup kasus" />

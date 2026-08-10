@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import ai, auth, cases, dashboard, health, integration, knowledge, meetings, reports
+from app.api.v1.endpoints import ai, auth, cases, dashboard, health, integration, knowledge, meetings, reports, performance, decision
 
 api_router = APIRouter()
 api_router.include_router(health.router, tags=["health"])
@@ -12,3 +12,5 @@ api_router.include_router(meetings.router, prefix="/meetings", tags=["meetings"]
 api_router.include_router(knowledge.router, prefix="/knowledge", tags=["knowledge"])
 api_router.include_router(reports.router, prefix="/reports", tags=["reports"])
 api_router.include_router(integration.router, prefix="/integrations", tags=["integrations"])
+api_router.include_router(performance.router, prefix="/performance", tags=["performance"])
+api_router.include_router(decision.router, prefix="/decisions", tags=["decisions"])
