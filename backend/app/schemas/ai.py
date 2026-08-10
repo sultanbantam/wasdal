@@ -30,6 +30,7 @@ class IntakeResult(BaseModel):
     entities: dict[str, Any]
     audit_notes: list[str]
     case_id: str | None = None
+    rkpd_program_id: str | None = None
 
 
 class MeetingRequest(BaseModel):

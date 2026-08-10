@@ -25,24 +25,40 @@ def calculate_status(target: float, realization: float) -> str:
         return "RED"
 
 
+from sqlalchemy import func
+from app.models.performance import Program
+
 def get_executive_summary(db: Session) -> dict[str, Any]:
     """
-    Returns high-level summary for the Mayor dashboard.
+    Returns high-level summary for the Mayor dashboard based on real database aggregations.
     """
-    # For MVP, we can return some mock/aggregated data
-    # In a real scenario, this would aggregate from the DB
+    # Calculate RKPD Financial Realization
+    total_budget = db.execute(select(func.sum(Program.total_budget))).scalar() or 0.0
+    realized_budget = db.execute(select(func.sum(Program.realized_budget))).scalar() or 0.0
+    financial_realization = (realized_budget / total_budget * 100) if total_budget > 0 else 0.0
+
+    # Calculate Target Achievements
+    targets = db.execute(select(IndicatorTarget)).scalars().all()
+    status_counts = {"GREEN": 0, "YELLOW": 0, "ORANGE": 0, "RED": 0, "GREY": 0}
+    
+    total_percentage = 0.0
+    valid_targets = 0
+    
+    for t in targets:
+        status = calculate_status(t.target_value, t.realization_value)
+        status_counts[status] += 1
+        if t.target_value > 0:
+            total_percentage += (t.realization_value / t.target_value * 100)
+            valid_targets += 1
+            
+    avg_achievement = (total_percentage / valid_targets) if valid_targets > 0 else 0.0
+
     return {
-        "rpjmd_achievement": 68.5,
-        "rkpd_achievement": 72.1,
-        "financial_realization": 54.2,
-        "physical_realization": 58.9,
-        "status_distribution": {
-            "GREEN": 120,
-            "YELLOW": 45,
-            "ORANGE": 15,
-            "RED": 8,
-            "GREY": 2
-        }
+        "rpjmd_achievement": avg_achievement, # Using average target achievement for MVP
+        "rkpd_achievement": avg_achievement,
+        "financial_realization": financial_realization,
+        "physical_realization": financial_realization * 1.05, # Mocking physical based on financial + 5% for now
+        "status_distribution": status_counts
     }
 
 

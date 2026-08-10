@@ -77,6 +77,7 @@ class Case(Base):
     )
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    rkpd_program_id: Mapped[str | None] = mapped_column(ForeignKey("programs.id"), nullable=True)
 
     created_by: Mapped["User | None"] = relationship("User")
     audit_logs: Mapped[list["AuditLog"]] = relationship("AuditLog", back_populates="case", cascade="all, delete-orphan")

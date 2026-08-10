@@ -48,6 +48,7 @@ def intake(
                 ai_summary=result["summary"],
                 ai_confidence=result["confidence"],
                 suggested_solution=result["recommendations"],
+                rkpd_program_id=result.get("rkpd_program_id"),
             ),
             actor_id=user.id if user else None,
         )

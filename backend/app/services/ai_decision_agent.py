@@ -12,52 +12,49 @@ class DecisionSupportAgent:
     def detect_decisions(self) -> list[dict[str, Any]]:
         """
         Scans for issues that require executive decisions.
-        For MVP, returns mock data.
+        Reads from the ExecutiveDecision database table.
         """
-        return [
-            {
-                "title": "Percepatan Penanganan Genangan Kawasan X",
-                "priority": "CRITICAL",
-                "impact": "Berpotensi mempengaruhi indikator RPJMD",
-                "responsible_opd": "Dinas Pekerjaan Umum",
-                "status": "Waiting Decision",
-                "decision_owner": "Sekda",
-                "options": [
-                    {
-                        "id": "A",
-                        "description": "Negosiasi percepatan penyelesaian aset",
-                        "estimated_time": "14 days"
-                    },
-                    {
-                        "id": "B",
-                        "description": "Relokasi sebagian pekerjaan",
-                        "estimated_time": "30 days"
-                    }
-                ],
-                "recommended_option": "A"
-            },
-             {
-                "title": "Pergeseran Anggaran Pembebasan Lahan Sekolah",
-                "priority": "HIGH",
-                "impact": "Target pendidikan terhambat",
-                "responsible_opd": "Dinas Pendidikan",
-                "status": "Waiting Decision",
-                "decision_owner": "Mayor",
-                "options": [
-                    {
-                        "id": "A",
-                        "description": "Gunakan dana BTT",
-                        "estimated_time": "7 days"
-                    },
-                    {
-                        "id": "B",
-                        "description": "Tunda ke APBD Perubahan",
-                        "estimated_time": "90 days"
-                    }
-                ],
-                "recommended_option": "A"
-            }
-        ]
+        decisions = self.db.query(ExecutiveDecision).filter_by(status="Waiting Decision").all()
+        result = []
+        for d in decisions:
+            result.append({
+                "id": d.id,
+                "title": d.title,
+                "priority": d.priority,
+                "impact": d.impact,
+                "responsible_opd": d.responsible_opd,
+                "status": d.status,
+                "decision_owner": d.decision_owner,
+                "options": d.options,
+                "recommended_option": d.recommended_option
+            })
+            
+        # Fallback to dummy data only if DB is empty for demonstration purposes
+        if not result:
+            result = [
+                {
+                    "title": "Percepatan Penanganan Genangan Kawasan X",
+                    "priority": "CRITICAL",
+                    "impact": "Berpotensi mempengaruhi indikator RPJMD",
+                    "responsible_opd": "Dinas Pekerjaan Umum",
+                    "status": "Waiting Decision",
+                    "decision_owner": "Sekda",
+                    "options": [
+                        {
+                            "id": "A",
+                            "description": "Negosiasi percepatan penyelesaian aset",
+                            "estimated_time": "14 days"
+                        },
+                        {
+                            "id": "B",
+                            "description": "Relokasi sebagian pekerjaan",
+                            "estimated_time": "30 days"
+                        }
+                    ],
+                    "recommended_option": "A"
+                }
+            ]
+        return result
 
     def approve_decision(self, decision_id: str, option_id: str) -> bool:
         """

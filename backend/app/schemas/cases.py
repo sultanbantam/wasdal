@@ -29,6 +29,7 @@ class CaseBase(BaseModel):
     ai_summary: str | None = None
     ai_confidence: float = 0.0
     suggested_solution: list[dict[str, Any]] = []
+    rkpd_program_id: str | None = None
 
 
 class CaseCreate(CaseBase):

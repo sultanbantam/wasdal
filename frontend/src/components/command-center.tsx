@@ -130,6 +130,9 @@ export function CommandCenter() {
               <a href="/executive/decision" className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted">
                 <ListChecks size={17} /> Decision Required
               </a>
+              <a href="/executive/upload" className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted">
+                <Upload size={17} /> Data Ingestion
+              </a>
             </div>
           </nav>
           <Panel className="mt-6">
