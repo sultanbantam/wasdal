@@ -33,8 +33,8 @@ def get_executive_summary(db: Session) -> dict[str, Any]:
     Returns high-level summary for the Mayor dashboard based on real database aggregations.
     """
     # Calculate RKPD Financial Realization
-    total_budget = db.execute(select(func.sum(Program.total_budget))).scalar() or 0.0
-    realized_budget = db.execute(select(func.sum(Program.realized_budget))).scalar() or 0.0
+    total_budget = db.execute(select(func.sum(Program.budget))).scalar() or 0.0
+    realized_budget = db.execute(select(func.sum(Program.realization))).scalar() or 0.0
     financial_realization = (realized_budget / total_budget * 100) if total_budget > 0 else 0.0
 
     # Calculate Target Achievements

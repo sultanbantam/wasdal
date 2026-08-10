@@ -28,11 +28,11 @@ class DataExtractorService:
             
             program = self.db.query(Program).filter_by(name="Program Penyelenggaraan Jalan").first()
             if not program:
-                program = Program(rkpd_id=rkpd.id, name="Program Penyelenggaraan Jalan", opd_id="Dinas PUPR", total_budget=5000000000, realized_budget=2000000000)
+                program = Program(rkpd_id=rkpd.id, code="PRG-001", name="Program Penyelenggaraan Jalan", opd_id="Dinas PUPR", budget=5000000000, realization=2000000000)
                 self.db.add(program)
             else:
                 # Update existing program
-                program.realized_budget = 2500000000
+                program.realization = 2500000000
             
             self.db.commit()
             return {"status": "success", "message": "Successfully synced 1 program from SIPD API"}
@@ -67,11 +67,13 @@ class DataExtractorService:
 
                 program = self.db.query(Program).filter_by(name=prog_name, rkpd_id=rkpd.id).first()
                 if not program:
-                    program = Program(rkpd_id=rkpd.id, name=prog_name, opd_id=opd, total_budget=budget, realized_budget=realized)
+                    # Provide 'code' which is required (using a dummy or generated if not in Excel)
+                    code = str(row.get('Kode', f"PRG-{count+1:04d}"))
+                    program = Program(rkpd_id=rkpd.id, code=code, name=prog_name, opd_id=opd, budget=budget, realization=realized)
                     self.db.add(program)
                 else:
-                    program.total_budget = budget
-                    program.realized_budget = realized
+                    program.budget = budget
+                    program.realization = realized
                 count += 1
                 
             self.db.commit()

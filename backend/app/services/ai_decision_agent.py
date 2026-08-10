@@ -17,16 +17,25 @@ class DecisionSupportAgent:
         decisions = self.db.query(ExecutiveDecision).filter_by(status="Waiting Decision").all()
         result = []
         for d in decisions:
+            # We construct options dynamically or mock them if not present
+            options = []
+            if d.recommendation:
+                 options.append({
+                     "id": "A",
+                     "description": d.recommendation,
+                     "estimated_time": "7 days"
+                 })
+                 
             result.append({
                 "id": d.id,
                 "title": d.title,
                 "priority": d.priority,
-                "impact": d.impact,
-                "responsible_opd": d.responsible_opd,
+                "impact": d.issue.impact if d.issue else "Dampak signifikan terhadap kinerja",
+                "responsible_opd": d.issue.opd_id if d.issue else "OPD Terkait",
                 "status": d.status,
                 "decision_owner": d.decision_owner,
-                "options": d.options,
-                "recommended_option": d.recommended_option
+                "options": options,
+                "recommended_option": "A" if options else None
             })
             
         # Fallback to dummy data only if DB is empty for demonstration purposes
