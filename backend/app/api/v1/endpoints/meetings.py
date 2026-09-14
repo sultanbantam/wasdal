@@ -8,6 +8,7 @@ from openai import OpenAI
 from app.db.session import get_db
 from app.models import MeetingRecord
 from app.core.config import get_settings
+from app.services.audio_processor import process_document_or_audio
 
 router = APIRouter()
 
@@ -17,7 +18,10 @@ async def transcribe_audio(file: UploadFile = File(...)) -> dict:
     if not settings.openai_api_key:
         raise HTTPException(status_code=500, detail="OpenAI API Key is not configured")
     
-    client = OpenAI(api_key=settings.openai_api_key)
+    client = OpenAI(
+        api_key=settings.openai_api_key,
+        base_url=settings.openai_base_url or "https://api.openai.com/v1"
+    )
     
     # Save the uploaded file temporarily
     suffix = os.path.splitext(file.filename)[1].lower() if file.filename else ".m4a"
@@ -27,30 +31,17 @@ async def transcribe_audio(file: UploadFile = File(...)) -> dict:
         tmp_path = tmp.name
 
     try:
-        if suffix == ".pdf":
-            import pypdf
-            text = ""
-            with open(tmp_path, "rb") as f:
-                reader = pypdf.PdfReader(f)
-                for page in reader.pages:
-                    text += page.extract_text() + "\n"
-            return {"text": text}
-        elif suffix in [".txt", ".md", ".csv"]:
-            with open(tmp_path, "r", encoding="utf-8") as f:
-                return {"text": f.read()}
-        else:
-            # Assume audio and send to Whisper
-            with open(tmp_path, "rb") as audio_file:
-                transcript = client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=audio_file
-                )
-            return {"text": transcript.text}
+        text = process_document_or_audio(tmp_path, suffix, client)
+        return {"text": text}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         if os.path.exists(tmp_path):
-            os.remove(tmp_path)
+            try:
+                os.remove(tmp_path)
+            except Exception:
+                pass
+
 
 @router.get("")
 def list_meetings(q: str | None = Query(default=None), db: Session = Depends(get_db)) -> list[dict]:

@@ -28,7 +28,10 @@ import {
   Mic,
   Square,
   Upload,
-  RefreshCw
+  RefreshCw,
+  Download,
+  Timer,
+  Clock
 } from "lucide-react";
 import { getCases, getDashboard, runIntake, runMeeting, getMeetings, updateCaseStatus, getKnowledge, uploadKnowledge, syncJDIH, syncLapor } from "@/lib/api";
 import { formatNumber, priorityTone } from "@/lib/utils";
@@ -450,7 +453,17 @@ function IntakeView() {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      let options: MediaRecorderOptions = { audioBitsPerSecond: 32000 };
+      if (typeof MediaRecorder.isTypeSupported === "function") {
+        if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+          options = { mimeType: "audio/webm;codecs=opus", audioBitsPerSecond: 32000 };
+        } else if (MediaRecorder.isTypeSupported("audio/webm")) {
+          options = { mimeType: "audio/webm", audioBitsPerSecond: 32000 };
+        } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+          options = { mimeType: "audio/mp4", audioBitsPerSecond: 32000 };
+        }
+      }
+      const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
@@ -459,8 +472,10 @@ function IntakeView() {
       };
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        await uploadToTranscribe(audioBlob, "recording.webm");
+        const mimeType = mediaRecorder.mimeType || "audio/webm";
+        const ext = mimeType.includes("mp4") ? "m4a" : "webm";
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        await uploadToTranscribe(audioBlob, `voice-intake.${ext}`);
         stream.getTracks().forEach((track) => track.stop());
       };
 
@@ -673,32 +688,75 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
   const priorityCases = cases.filter((item) => item.priority === "Critical" || item.priority === "High");
   const [transcriptText, setTranscriptText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const [recordDuration, setRecordDuration] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgressMsg, setUploadProgressMsg] = useState("");
+  const [backupAudio, setBackupAudio] = useState<{ url: string; filename: string; sizeMb: string } | null>(null);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<BlobPart[]>([]);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [saveRecord, setSaveRecord] = useState(true);
 
+  const formatDuration = (totalSeconds: number) => {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    if (h > 0) {
+      return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+    }
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  };
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      let options: MediaRecorderOptions = { audioBitsPerSecond: 32000 };
+      if (typeof MediaRecorder.isTypeSupported === "function") {
+        if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+          options = { mimeType: "audio/webm;codecs=opus", audioBitsPerSecond: 32000 };
+        } else if (MediaRecorder.isTypeSupported("audio/webm")) {
+          options = { mimeType: "audio/webm", audioBitsPerSecond: 32000 };
+        } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+          options = { mimeType: "audio/mp4", audioBitsPerSecond: 32000 };
+        }
+      }
+      const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
+      setRecordDuration(0);
+
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = setInterval(() => {
+        setRecordDuration((prev) => prev + 1);
+      }, 1000);
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) audioChunksRef.current.push(event.data);
       };
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        await uploadToTranscribe(audioBlob, "recording.webm");
+        if (timerIntervalRef.current) {
+          clearInterval(timerIntervalRef.current);
+          timerIntervalRef.current = null;
+        }
+        const mimeType = mediaRecorder.mimeType || "audio/webm";
+        const ext = mimeType.includes("mp4") ? "m4a" : "webm";
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        const now = new Date();
+        const ts = now.toISOString().replace(/[:.]/g, "-").slice(0, 19);
+        const backupFilename = `rekaman-rapat-${ts}.${ext}`;
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const sizeMb = (audioBlob.size / (1024 * 1024)).toFixed(2);
+        setBackupAudio({ url: audioUrl, filename: backupFilename, sizeMb });
+
+        await uploadToTranscribe(audioBlob, backupFilename);
         stream.getTracks().forEach((track) => track.stop());
       };
 
-      mediaRecorder.start();
+      mediaRecorder.start(1000);
       setIsRecording(true);
     } catch (err) {
       alert("Gagal mengakses mikrofon: " + err);
@@ -709,11 +767,16 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
     }
   };
 
   const uploadToTranscribe = async (fileOrBlob: Blob | File, filename: string) => {
     setIsUploading(true);
+    setUploadProgressMsg("Memproses & mentranskripsikan audio rapat via AI (Otomatis kompresi & segmentasi untuk durasi panjang)...");
     try {
       const formData = new FormData();
       formData.append("file", fileOrBlob, filename);
@@ -729,11 +792,12 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
         throw new Error(`Gagal mentranskrip audio: ${res.status} - ${errorText}`);
       }
       const data = await res.json();
-      setTranscriptText((prev) => prev + (prev ? " " : "") + data.text);
+      setTranscriptText((prev) => prev + (prev ? "\n\n" : "") + data.text);
     } catch (err) {
       alert("Terjadi kesalahan: " + (err instanceof Error ? err.message : String(err)));
     } finally {
       setIsUploading(false);
+      setUploadProgressMsg("");
     }
   };
 
@@ -741,6 +805,7 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
     const file = e.target.files?.[0];
     if (!file) return;
     uploadToTranscribe(file, file.name);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
   
   const queryClient = useQueryClient();
@@ -749,6 +814,7 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cases"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["meetings"] });
     }
   });
 
@@ -799,9 +865,9 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
           
           <div className="mt-6 flex flex-col gap-4">
             <div className="rounded-md border border-border p-4 bg-muted/30">
-              <div className="mb-3 text-sm font-medium">Langkah 1: Masukkan Sumber Rapat</div>
+              <div className="mb-2 text-sm font-medium">Langkah 1: Masukkan Sumber Rapat</div>
               <p className="mb-4 text-xs text-muted-foreground">
-                Pilih salah satu metode di bawah ini untuk menghasilkan transkrip rapat.
+                Mendukung rekaman mikrofon (durasi panjang otomatis terkompresi), unggah audio (.mp3, .wav, .m4a, .webm), PDF, atau teks.
               </p>
               
               <div className="grid gap-3 sm:grid-cols-2">
@@ -809,19 +875,22 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
                   <Button 
                     variant={isRecording ? "danger" : "secondary"} 
                     onClick={isRecording ? stopRecording : startRecording}
-                    className="w-full"
+                    className="w-full relative overflow-hidden"
                   >
                     {isRecording ? (
-                      <span className="flex items-center gap-2">
-                        <Square size={16} /> Stop Rekam
+                      <span className="flex items-center gap-2 font-medium">
+                        <span className="h-2.5 w-2.5 rounded-full bg-red-400 animate-ping" />
+                        <Square size={16} /> Stop ({formatDuration(recordDuration)})
                       </span>
                     ) : (
                       <span className="flex items-center gap-2">
-                        <Mic size={16} /> Rekam Suara
+                        <Mic size={16} className="text-primary" /> Rekam Suara
                       </span>
                     )}
                   </Button>
-                  <span className="text-[10px] text-center text-muted-foreground">Gunakan mic perangkat Anda</span>
+                  <span className="text-[10px] text-center text-muted-foreground">
+                    {isRecording ? `Sedang merekam (${formatDuration(recordDuration)})` : "Gunakan mic perangkat Anda"}
+                  </span>
                 </div>
 
                 <div className="flex flex-col gap-2">
@@ -829,22 +898,63 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
                     type="file"
                     ref={fileInputRef}
                     className="hidden"
-                    accept="audio/*,application/pdf,text/plain"
+                    accept="audio/*,video/*,application/pdf,text/plain,text/csv,text/markdown"
                     onChange={handleFileUpload}
                   />
                   <Button variant="secondary" onClick={() => fileInputRef.current?.click()} disabled={isUploading || isRecording} className="w-full">
                     <span className="flex items-center gap-2">
-                      <Upload size={16} /> {isUploading ? "Uploading..." : "Unggah Dokumen"}
+                      <Upload size={16} /> {isUploading ? "Memproses..." : "Unggah Dokumen / Audio"}
                     </span>
                   </Button>
-                  <span className="text-[10px] text-center text-muted-foreground">Mendukung PDF, Audio, dan Teks</span>
+                  <span className="text-[10px] text-center text-muted-foreground">Audio, PDF, TXT, CSV, dsb.</span>
                 </div>
               </div>
+
+              {backupAudio && (
+                <div className="mt-3 flex items-center justify-between p-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-xs">
+                  <div className="flex items-center gap-2 text-emerald-400 font-medium">
+                    <ShieldCheck size={16} className="shrink-0" />
+                    <span>Cadangan audio aman ({backupAudio.sizeMb} MB)</span>
+                  </div>
+                  <a
+                    href={backupAudio.url}
+                    download={backupAudio.filename}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs transition"
+                  >
+                    <Download size={13} /> Unduh File Rekaman
+                  </a>
+                </div>
+              )}
+
+              {isUploading && (
+                <div className="mt-3 p-3 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary flex items-center gap-2.5 animate-pulse">
+                  <RefreshCw size={15} className="animate-spin shrink-0" />
+                  <span>{uploadProgressMsg || "Sedang memproses & mentranskripsikan audio rapat..."}</span>
+                </div>
+              )}
               
               {transcriptText && (
-                <div className="mt-4 p-3 bg-background rounded border border-border text-xs text-muted-foreground">
-                  <div className="font-medium text-foreground mb-1">Status Transkripsi:</div>
-                  <div className="line-clamp-2">{transcriptText}</div>
+                <div className="mt-4 p-3 bg-background rounded border border-border text-xs">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="font-semibold text-foreground flex items-center gap-1.5">
+                      <CheckCircle2 size={14} className="text-emerald-500" />
+                      Transkrip Rapat Siap ({transcriptText.split(/\s+/).filter(Boolean).length} kata):
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setTranscriptText("")}
+                      className="text-[11px] text-muted-foreground hover:text-red-400 transition"
+                    >
+                      Hapus
+                    </button>
+                  </div>
+                  <textarea
+                    value={transcriptText}
+                    onChange={(e) => setTranscriptText(e.target.value)}
+                    rows={4}
+                    className="w-full rounded bg-muted/40 p-2 text-xs text-foreground border border-border/50 focus:outline-none focus:ring-1 focus:ring-primary"
+                    placeholder="Hasil transkripsi rapat akan muncul di sini dan dapat diedit..."
+                  />
                 </div>
               )}
             </div>
@@ -855,12 +965,12 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
                 className="w-full" 
                 variant="primary" 
                 onClick={() => meetingMutation.mutate()}
-                disabled={meetingMutation.isPending || isRecording || isUploading || !transcriptText}
+                disabled={meetingMutation.isPending || isRecording || isUploading || !transcriptText.trim()}
               >
                 {meetingMutation.isPending ? (
                   <span className="flex items-center gap-2">
                     <Bot size={16} className="animate-pulse" />
-                    Generating AI Minutes...
+                    Membuat AI Minutes...
                   </span>
                 ) : (
                   <span className="flex items-center gap-2">
