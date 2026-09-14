@@ -33,7 +33,7 @@ import {
   Timer,
   Clock
 } from "lucide-react";
-import { getCases, getDashboard, runIntake, runMeeting, getMeetings, updateCaseStatus, getKnowledge, uploadKnowledge, syncJDIH, syncLapor } from "@/lib/api";
+import { getCases, getDashboard, runIntake, runMeeting, getMeetings, updateCaseStatus, getKnowledge, uploadKnowledge, syncJDIH, syncLapor, transcribeAudio } from "@/lib/api";
 import { formatNumber, priorityTone } from "@/lib/utils";
 import type { CaseItem, DashboardData, IntakeResult, MeetingResult } from "@/types/wasdal";
 import { Badge, Button, Panel, ProgressBar, SectionTitle } from "@/components/ui";
@@ -496,20 +496,7 @@ function IntakeView() {
   const uploadToTranscribe = async (fileOrBlob: Blob | File, filename: string) => {
     setIsUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", fileOrBlob, filename);
-      
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001/api/v1";
-      const res = await fetch(`${API_URL}/meetings/transcribe`, {
-        method: "POST",
-        body: formData
-      });
-      
-      if (!res.ok) {
-        const errorText = await res.text().catch(() => "Unknown error");
-        throw new Error(`Gagal mentranskrip audio: ${res.status} - ${errorText}`);
-      }
-      const data = await res.json();
+      const data = await transcribeAudio(fileOrBlob, filename);
       setRawText((prev) => prev + (prev ? " " : "") + data.text);
     } catch (err) {
       alert("Terjadi kesalahan: " + (err instanceof Error ? err.message : String(err)));
@@ -778,20 +765,7 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
     setIsUploading(true);
     setUploadProgressMsg("Memproses & mentranskripsikan audio rapat via AI (Otomatis kompresi & segmentasi untuk durasi panjang)...");
     try {
-      const formData = new FormData();
-      formData.append("file", fileOrBlob, filename);
-      
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001/api/v1";
-      const res = await fetch(`${API_URL}/meetings/transcribe`, {
-        method: "POST",
-        body: formData
-      });
-      
-      if (!res.ok) {
-        const errorText = await res.text().catch(() => "Unknown error");
-        throw new Error(`Gagal mentranskrip audio: ${res.status} - ${errorText}`);
-      }
-      const data = await res.json();
+      const data = await transcribeAudio(fileOrBlob, filename);
       setTranscriptText((prev) => prev + (prev ? "\n\n" : "") + data.text);
     } catch (err) {
       alert("Terjadi kesalahan: " + (err instanceof Error ? err.message : String(err)));

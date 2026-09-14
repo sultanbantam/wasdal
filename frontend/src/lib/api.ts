@@ -117,3 +117,20 @@ export async function syncLapor() {
   }
   return res.json();
 }
+
+export async function transcribeAudio(fileOrBlob: Blob | File, filename: string): Promise<{ text: string }> {
+  const formData = new FormData();
+  formData.append("file", fileOrBlob, filename);
+
+  const res = await fetch(`${API_URL}/meetings/transcribe`, {
+    method: "POST",
+    body: formData
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text().catch(() => "Unknown error");
+    throw new Error(`Gagal mentranskrip audio (${res.status}): ${errorText}`);
+  }
+  return res.json();
+}
+
