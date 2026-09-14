@@ -25,6 +25,14 @@ MAX_DIRECT_WHISPER_BYTES = 20 * 1024 * 1024
 CHUNK_DURATION_MS = 10 * 60 * 1000  # 10 minutes per chunk
 
 
+WHISPER_INITIAL_PROMPT = (
+    "Rapat Koordinasi Pemerintah Kota Tangerang Selatan, Bagian Perekonomian dan Pembangunan (Ekbang), Wasdal. "
+    "Membahas isu taktis: pangan, inflasi, infrastruktur, drainase, sampah, PJU, Satpol PP, "
+    "Dishub, Dinas Lingkungan Hidup DLH, Dinkes, Disperindag, Dinas Ketahanan Pangan, Bapenda, "
+    "APBD, BLUD, BUMD, CSR, Kelurahan, Camat, RT/RW, SP4N LAPOR, target output, PIC, deadline."
+)
+
+
 def split_and_transcribe_audio(file_path: str, client: OpenAI) -> str:
     """
     Transcribes audio files of ANY duration or size by compressing & chunking if necessary.
@@ -34,7 +42,10 @@ def split_and_transcribe_audio(file_path: str, client: OpenAI) -> str:
         with open(file_path, "rb") as audio_file:
             transcript = client.audio.transcriptions.create(
                 model="whisper-1",
-                file=audio_file
+                file=audio_file,
+                prompt=WHISPER_INITIAL_PROMPT,
+                temperature=0.0,
+                language="id"
             )
             return transcript.text
 
@@ -46,7 +57,10 @@ def split_and_transcribe_audio(file_path: str, client: OpenAI) -> str:
         with open(file_path, "rb") as audio_file:
             transcript = client.audio.transcriptions.create(
                 model="whisper-1",
-                file=audio_file
+                file=audio_file,
+                prompt=WHISPER_INITIAL_PROMPT,
+                temperature=0.0,
+                language="id"
             )
             return transcript.text
 
@@ -59,7 +73,10 @@ def split_and_transcribe_audio(file_path: str, client: OpenAI) -> str:
             with open(file_path, "rb") as audio_file:
                 transcript = client.audio.transcriptions.create(
                     model="whisper-1",
-                    file=audio_file
+                    file=audio_file,
+                    prompt=WHISPER_INITIAL_PROMPT,
+                    temperature=0.0,
+                    language="id"
                 )
                 return transcript.text
         except Exception as e:
@@ -90,12 +107,16 @@ def split_and_transcribe_audio(file_path: str, client: OpenAI) -> str:
             with open(chunk_path, "rb") as audio_file:
                 chunk_transcript = client.audio.transcriptions.create(
                     model="whisper-1",
-                    file=audio_file
+                    file=audio_file,
+                    prompt=WHISPER_INITIAL_PROMPT,
+                    temperature=0.0,
+                    language="id"
                 )
                 if chunk_transcript.text and chunk_transcript.text.strip():
                     transcripts.append(chunk_transcript.text.strip())
 
         return "\n\n".join(transcripts)
+
 
     finally:
         # Clean up chunk files

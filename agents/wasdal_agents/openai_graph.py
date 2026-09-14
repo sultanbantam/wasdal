@@ -27,15 +27,15 @@ class IntakeOutput(BaseModel):
     confidence: float = Field(description="Tingkat keyakinan AI dari 0.0 sampai 1.0")
 
 class ActionItem(BaseModel):
-    task: str = Field(description="Tugas yang harus dilakukan")
-    pic: str = Field(description="Penanggung jawab tugas (Assignee)")
-    deadline: str = Field(description="Tenggat waktu")
+    task: str = Field(description="Tugas taktis konkret dengan target output terukur (misal: 'Integrasikan API stok pangan 7 pasar ke Wasdal [Output: Dashboard Live]')")
+    pic: str = Field(description="Penanggung jawab spesifik (nama jabatan / OPD, misal: 'Kabid Ketahanan Pangan', 'Kasi Trantib Satpol PP', 'Diskominfo & Bapenda')")
+    deadline: str = Field(description="Tenggat waktu yang agresif dan jelas (misal: '2x24 Jam', '3 Hari Kerja', '7 Hari Kerja', '14 Hari')")
     status: str = Field(default="Open", description="Status (selalu Open)")
 
 class MeetingOutput(BaseModel):
-    summary: str = Field(description="Ringkasan rapat (maksimal 3 kalimat)")
-    decisions: list[str] = Field(description="Daftar keputusan yang diambil")
-    action_items: list[ActionItem] = Field(description="Daftar tugas (action item)")
+    summary: str = Field(description="Ringkasan eksekutif padat: Akar Masalah, Arah Strategi Terobosan, dan Target Hasil (maksimal 3 kalimat)")
+    decisions: list[str] = Field(description="Daftar keputusan eksekutif kebijakan yang berani, solutif, implementatif, dan bebas dari kata normatif")
+    action_items: list[ActionItem] = Field(description="Daftar Action Item taktis 5W1H (Tindakan Nyata + PIC Jabatan + Target Output + Deadline Ketat)")
     confidence: float = Field(description="Tingkat keyakinan AI dari 0.0 sampai 1.0")
 
 class OpenAIWasdalAgentGraph:
@@ -90,12 +90,34 @@ Ekstrak semua informasi dan buat rekomendasi paling solutif!"""
         }
 
     def run_meeting(self, title: str, transcript: str) -> dict[str, Any]:
-        prompt = f"""Anda adalah AI asisten rapat untuk Pemerintah Kota Tangerang Selatan (Bagian Ekbang).
-Tugas Anda adalah merangkum notulen rapat berikut:
-Judul Rapat: {title}
-Transkrip Rapat: {transcript}
+        prompt = f"""Anda adalah Chief Strategy Officer & AI Executive Copilot untuk Pemerintah Kota Tangerang Selatan (Bagian Perekonomian dan Pembangunan / Wasdal).
 
-Ekstrak ringkasan, daftar keputusan, dan daftar Action Item dengan akurat."""
+Tugas Anda adalah membedah transkrip rapat berikut dan menghasilkan Notulen Eksekutif Tingkat Tinggi yang SANGAT IMPLEMENTATIF, INOVATIF, OUT OF THE BOX, dan LANGSUNG BISA DIEKSEKUSI DI LAPANGAN.
+
+=========================
+ATURAN WAJIB (ANTI-NORMATIF):
+=========================
+1. DILARANG KERAS menggunakan bahasa normatif, pasif, atau klise birokrasi seperti:
+   - "Mendorong kerja sama...", "Memperkuat koordinasi...", "Mempersiapkan penyusunan regulasi...", "Meningkatkan kesadaran masyarakat...", "Melakukan kajian lebih lanjut...", "Menyusun tim...".
+2. KEPUTUSAN (Decisions) WAJIB BERUPA KEBIJAKAN TAKTIS OPERASIONAL:
+   - Rumuskan keputusan yang berani, inovatif, dan menyelesaikan akar masalah secara cepat.
+   - Contoh baik: "Terapkan sistem monitoring stok pangan digital real-time terintegrasi 7 pasar tradisional dan distributor utama untuk memutus rantai spekulan."
+3. ACTION ITEMS HARUS FORMULA 5W1H (Tindakan Nyata + PIC Jabatan + Target Output + Deadline Ketat):
+   - JELAS SIAPA BERBUAT APA: PIC harus menyebutkan jabatan/dinas spesifik (contoh: "Kabid Distribusi Dinas Ketahanan Pangan", "Kasi Trantib Satpol PP", "Diskominfo & Bapenda"). Dilarang hanya menulis "Tim", "OPD Terkait", atau "Pihak Berwenang".
+   - OUTPUT TERUKUR: Sebutkan deliverable fisik/digital yang diserahkan (contoh: "[Output: SOP Terbit]", "[Output: Dashboard Live]", "[Output: Laporan Sidak 3 Titik Pasar]").
+   - STRATEGI CERDAS & OUT OF THE BOX: Tawarkan solusi efisien dan berdaya ungkit tinggi (kolaborasi CSR swasta, satgas reaksi cepat lintas OPD, otomatisasi bot/AI, pemanfaatan aset idle daerah, skema cashback retribusi non-tunai).
+   - DEADLINE AGRESIF: Gunakan jangka waktu taktis (misal: "2x24 Jam", "3 Hari Kerja", "7 Hari Kerja", "14 Hari").
+4. FILTRASI NOISE:
+   - Buang seluruh basa-basi, interupsi teknis, lelucon, dan percakapan tidak relevan. Fokus 100% pada substansi masalah, keputusan, dan penugasan.
+
+=========================
+DATA RAPAT:
+=========================
+Judul Rapat: {title}
+Transkrip Rapat:
+{transcript}
+
+Ekstrak dan susun notulen eksekutif terbaik dengan ketajaman analisis strategis!"""
 
         completion = self.client.beta.chat.completions.parse(
             model=self.model,
@@ -109,9 +131,9 @@ Ekstrak ringkasan, daftar keputusan, dan daftar Action Item dengan akurat."""
         action_block = "\n".join(f"- {item.task} | PIC: {item.pic} | Deadline: {item.deadline}" for item in output.action_items)
         minutes = (
             f"# Notulen {title}\n\n"
-            f"## Ringkasan\n{output.summary}\n\n"
-            f"## Keputusan\n{decision_block}\n\n"
-            f"## Action Item\n{action_block}\n"
+            f"## Ringkasan Eksekutif\n{output.summary}\n\n"
+            f"## Keputusan Strategis\n{decision_block}\n\n"
+            f"## Matrix Eksekusi & Action Items\n{action_block}\n"
         )
 
         return {
@@ -123,3 +145,4 @@ Ekstrak ringkasan, daftar keputusan, dan daftar Action Item dengan akurat."""
             "minutes": minutes,
             "confidence": output.confidence,
         }
+
