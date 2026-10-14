@@ -31,7 +31,19 @@ import {
   RefreshCw,
   Download,
   Timer,
-  Clock
+  Clock,
+  Building2,
+  Cable,
+  Footprints,
+  Store,
+  Coins,
+  GraduationCap,
+  Grid3X3,
+  Target,
+  Milestone,
+  UserCheck,
+  Flame,
+  Ban
 } from "lucide-react";
 import { getCases, getDashboard, runIntake, runMeeting, getMeetings, updateCaseStatus, getKnowledge, uploadKnowledge, syncJDIH, syncLapor, transcribeAudio } from "@/lib/api";
 import { formatNumber, priorityTone } from "@/lib/utils";
@@ -135,6 +147,62 @@ export function CommandCenter() {
               </a>
               <a href="/executive/upload" className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted">
                 <Upload size={17} /> Data Ingestion
+              </a>
+            </div>
+
+            <div className="pt-4 mt-4 border-t border-border">
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-3">Ruang Kota</div>
+              <a href="/urban" className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted">
+                <Building2 size={17} /> Overview Ruang Kota
+              </a>
+              <a href="/urban/cables" className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted">
+                <Cable size={17} /> Kabel & Utilitas
+              </a>
+              <a href="/urban/sidewalks" className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted">
+                <Footprints size={17} /> Trotoar & Pedestrian
+              </a>
+              <a href="/urban/obstructions" className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted">
+                <Ban size={17} /> Hambatan & Parkir Liar
+              </a>
+              <a href="/urban/vendors" className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted">
+                <Store size={17} /> PKL & Zona Resmi
+              </a>
+              <a href="/urban/hotspots" className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted">
+                <Flame size={17} /> Hotspot Masalah
+              </a>
+              <a href="/urban/walkpoints" className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted">
+                <Coins size={17} /> WalkPoints
+              </a>
+            </div>
+
+            <div className="pt-4 mt-4 border-t border-border">
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-3">Talenta ASN</div>
+              <a href="/talent" className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted">
+                <UsersRound size={17} /> Overview Talenta
+              </a>
+              <a href="/talent/socialization" className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted">
+                <GraduationCap size={17} /> Sosialisasi & FAQ
+              </a>
+              <a href="/talent/me" className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted">
+                <UserCheck size={17} /> Profil ASN Saya
+              </a>
+              <a href="/talent/9box" className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted">
+                <Grid3X3 size={17} /> Talent Map (9-Box)
+              </a>
+              <a href="/talent/pool" className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted">
+                <UsersRound size={17} /> Talent Pool
+              </a>
+              <a href="/talent/idp" className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted">
+                <Target size={17} /> Pengembangan (IDP)
+              </a>
+              <a href="/talent/succession" className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted">
+                <UserCheck size={17} /> Succession Planning
+              </a>
+              <a href="/talent/mobility" className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted">
+                <Sparkles size={17} /> Mobilitas ASN
+              </a>
+              <a href="/talent/implementation" className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted">
+                <Milestone size={17} /> Monitoring Roadmap
               </a>
             </div>
           </nav>

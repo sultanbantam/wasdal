@@ -1,6 +1,21 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import ai, auth, cases, dashboard, health, integration, knowledge, meetings, reports, performance, decision, data_ingestion
+from app.api.v1.endpoints import (
+    ai,
+    auth,
+    cases,
+    dashboard,
+    data_ingestion,
+    decision,
+    health,
+    integration,
+    knowledge,
+    meetings,
+    performance,
+    reports,
+    talent,
+    urban,
+)
 
 api_router = APIRouter()
 api_router.include_router(health.router, tags=["health"])
@@ -15,3 +30,5 @@ api_router.include_router(integration.router, prefix="/integrations", tags=["int
 api_router.include_router(performance.router, prefix="/performance", tags=["performance"])
 api_router.include_router(decision.router, prefix="/decisions", tags=["decisions"])
 api_router.include_router(data_ingestion.router, prefix="/data", tags=["data"])
+api_router.include_router(urban.router, prefix="/urban", tags=["ruang-kota"])
+api_router.include_router(talent.router, prefix="/talent", tags=["talenta-asn"])

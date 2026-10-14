@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Upload, RefreshCw, FileText, CheckCircle2, AlertCircle } from "lucide-react";
 import { Badge, Button, Panel } from "@/components/ui";
 
@@ -74,9 +75,9 @@ export default function UploadRKPDPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <header className="mb-8 border-b pb-4 flex items-center gap-4">
-        <a href="/" className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors text-gray-500 hover:text-gray-900 dark:hover:text-white mt-1">
+        <Link href="/" className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors text-gray-500 hover:text-gray-900 dark:hover:text-white mt-1">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-left"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
-        </a>
+        </Link>
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Data Ingestion Center</h1>
           <p className="text-gray-500 mt-2">Pusat sinkronisasi data RPJMD dan RKPD dari SIPD Kemendagri.</p>

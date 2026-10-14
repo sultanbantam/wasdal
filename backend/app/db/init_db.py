@@ -1,12 +1,45 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+import uuid
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.security import get_password_hash
-from app.models import Case, KnowledgeDocument, MeetingRecord, User
+from app.models import (
+    Case,
+    KnowledgeDocument,
+    MeetingRecord,
+    User,
+    UtilityOperator,
+    UrbanSegment,
+    UtilityAsset,
+    SidewalkSegment,
+    UrbanObstruction,
+    StreetVendorZone,
+    StreetVendorRecord,
+    UrbanHotspot,
+    WalkpointProgram,
+    WalkpointAccount,
+    WalkpointTransaction,
+    WalkpointReward,
+    OfficialPaymentAudit,
+    TalentProfile,
+    TalentDataSource,
+    TalentDataQualityIssue,
+    TalentSocializationMaterial,
+    TalentSocializationEvent,
+    TalentCompetency,
+    TalentAssessment,
+    TalentPool,
+    TalentIDP,
+    TalentIDPActivity,
+    TalentCriticalPosition,
+    TalentSuccessionPlan,
+    TalentMobilityRecommendation,
+    TalentImplementationMilestone,
+)
 from app.repositories.cases import CaseRepository
 from app.schemas import CaseCreate
 
@@ -16,6 +49,8 @@ def init_db(db: Session) -> None:
     seed_cases(db)
     seed_knowledge(db)
     seed_meetings(db)
+    seed_urban(db)
+    seed_talent(db)
 
 
 def seed_users(db: Session) -> None:
@@ -41,6 +76,48 @@ def seed_users(db: Session) -> None:
             email="pimpinan@wasdal.local",
             role="Pimpinan",
             agency="Setda",
+            hashed_password=get_password_hash("wasdal123"),
+        ),
+        User(
+            name="Wali Kota Tangerang Selatan",
+            email="walikota@wasdal.local",
+            role="Wali Kota",
+            agency="Pimpinan Daerah",
+            hashed_password=get_password_hash("wasdal123"),
+        ),
+        User(
+            name="Sekretaris Daerah",
+            email="sekda@wasdal.local",
+            role="Sekda",
+            agency="Sekretariat Daerah",
+            hashed_password=get_password_hash("wasdal123"),
+        ),
+        User(
+            name="Kepala BKPSDM Tangsel",
+            email="bkpsdm@wasdal.local",
+            role="BKPSDM",
+            agency="BKPSDM",
+            hashed_password=get_password_hash("wasdal123"),
+        ),
+        User(
+            name="Petugas Satpol PP Verifikator",
+            email="satpolpp@wasdal.local",
+            role="Petugas Lapangan",
+            agency="Satpol PP",
+            hashed_password=get_password_hash("wasdal123"),
+        ),
+        User(
+            name="Camat Serpong",
+            email="camat@wasdal.local",
+            role="Camat",
+            agency="Kecamatan Serpong",
+            hashed_password=get_password_hash("wasdal123"),
+        ),
+        User(
+            name="Budi Santoso, S.STP (ASN)",
+            email="asn@wasdal.local",
+            role="ASN",
+            agency="Bagian Ekbang",
             hashed_password=get_password_hash("wasdal123"),
         ),
     ]
@@ -208,4 +285,642 @@ def seed_meetings(db: Session) -> None:
         confidence=0.8,
     )
     db.add(meeting)
+    db.commit()
+
+
+def seed_urban(db: Session) -> None:
+    if db.scalar(select(UrbanSegment).limit(1)):
+        return
+
+    # Operators
+    op_telkom = UtilityOperator(name="PT Telkom Indonesia", utility_type="Fiber Optik / Telekomunikasi", contact_person="Hendra (0812-1111-2222)", mou_number="MOU-TANGSEL/2024/012")
+    op_pln = UtilityOperator(name="PLN UID Banten UP3 Serpong", utility_type="Kelistrikan (PLN)", contact_person="Arief (0813-2222-3333)", mou_number="MOU-PLN/2023/005")
+    op_fiber = UtilityOperator(name="PT FiberStar Network", utility_type="Fiber Optik / Telekomunikasi", contact_person="Dian (0817-3333-4444)", mou_number="MOU-FS/2024/088")
+    db.add_all([op_telkom, op_pln, op_fiber])
+    db.flush()
+
+    # Segments
+    seg1 = UrbanSegment(
+        segment_code="SEG-TGL-001",
+        street_name="Jl. Pahlawan Seribu (Koridor BSD)",
+        district="Serpong",
+        subdistrict="Lengkong Gudang",
+        start_latitude=-6.2882,
+        start_longitude=106.6644,
+        end_latitude=-6.2995,
+        end_longitude=106.6712,
+        length_meters=1450.0,
+        priority_level="High",
+        health_index_score=84.5,
+    )
+    seg2 = UrbanSegment(
+        segment_code="SEG-TGL-002",
+        street_name="Jl. Ir. H. Juanda (Koridor Ciputat)",
+        district="Ciputat",
+        subdistrict="Rempoa",
+        start_latitude=-6.3082,
+        start_longitude=106.7554,
+        end_latitude=-6.3211,
+        end_longitude=106.7588,
+        length_meters=2100.0,
+        priority_level="Critical",
+        health_index_score=48.2,
+    )
+    seg3 = UrbanSegment(
+        segment_code="SEG-TGL-003",
+        street_name="Jl. Surya Kencana (Koridor Pamulang)",
+        district="Pamulang",
+        subdistrict="Pamulang Barat",
+        start_latitude=-6.3421,
+        start_longitude=106.7389,
+        end_latitude=-6.3533,
+        end_longitude=106.7422,
+        length_meters=1200.0,
+        priority_level="High",
+        health_index_score=55.0,
+    )
+    db.add_all([seg1, seg2, seg3])
+    db.flush()
+
+    # Utility Assets (Cables)
+    now = datetime.now(UTC)
+    cable1 = UtilityAsset(
+        asset_code="CBL-001-FO-TELKOM",
+        segment_id=seg1.id,
+        operator_id=op_telkom.id,
+        utility_type="Fiber Optik / Telekomunikasi",
+        ownership_status="Ownership verified",
+        active_status="Active confirmed",
+        visual_condition="Rapi / Tertata",
+        clutter_index=16.5,
+        pole_number="PLN-SERP-104",
+        height_meters=5.2,
+        risk_level="Low",
+        permit_reference="IZIN-DISPERKIM-2024/89",
+        inspection_date=now - timedelta(days=5),
+        last_action="Penataan bundling kabel koridor",
+    )
+    cable2 = UtilityAsset(
+        asset_code="CBL-002-SUSPECTED-INACTIVE",
+        segment_id=seg2.id,
+        operator_id=op_fiber.id,
+        utility_type="Fiber Optik / Telekomunikasi",
+        ownership_status="Ownership unverified",
+        active_status="Suspected inactive",
+        visual_condition="Menggantung Rendah (< 4.5m)",
+        clutter_index=84.0,
+        pole_number="PLN-CPT-042",
+        height_meters=3.6,
+        risk_level="Critical",
+        permit_reference="Perlu klarifikasi izin",
+        inspection_date=now - timedelta(days=2),
+        notes="Kabel menggantung 3.6 meter membahayakan truk & pesepeda. Menunggu konfirmasi pemilik sebelum pemotongan resmi.",
+        last_action="Pemberian tanda inspeksi & notifikasi ke operator",
+    )
+    cable3 = UtilityAsset(
+        asset_code="CBL-003-CROSSING-PAMULANG",
+        segment_id=seg3.id,
+        operator_id=op_telkom.id,
+        utility_type="Fiber Optik / Telekomunikasi",
+        ownership_status="Ownership verified",
+        active_status="Active confirmed",
+        visual_condition="Semrawut / Kusut",
+        clutter_index=68.5,
+        pole_number="PLN-PML-089",
+        height_meters=4.1,
+        risk_level="High",
+        inspection_date=now - timedelta(days=4),
+        last_action="Jadwal penertiban bersama APJATEL",
+    )
+    db.add_all([cable1, cable2, cable3])
+
+    # Sidewalks
+    sw1 = SidewalkSegment(
+        segment_id=seg1.id,
+        width_meters=3.2,
+        surface_condition="Baik",
+        has_tactile_paving=True,
+        has_wheelchair_ramp=True,
+        lighting_condition="Terang",
+        zone_category="Protected Pedestrian Zone",
+        clear_pedestrian_width_meters=2.8,
+        repair_status="No Action Needed",
+    )
+    sw2 = SidewalkSegment(
+        segment_id=seg2.id,
+        width_meters=1.8,
+        surface_condition="Rusak Ringan",
+        has_tactile_paving=True,
+        has_wheelchair_ramp=False,
+        lighting_condition="Cukup",
+        zone_category="Needs Field Verification",
+        clear_pedestrian_width_meters=1.1,
+        repair_status="Perlu Perbaikan Paving & Ramp",
+    )
+    sw3 = SidewalkSegment(
+        segment_id=seg3.id,
+        width_meters=2.0,
+        surface_condition="Baik",
+        has_tactile_paving=False,
+        has_wheelchair_ramp=True,
+        lighting_condition="Cukup",
+        zone_category="Managed Public-Space Zone",
+        clear_pedestrian_width_meters=1.5,
+        repair_status="Pemasangan Jalur Pemandu Difabel",
+    )
+    db.add_all([sw1, sw2, sw3])
+
+    # Obstructions
+    obs1 = UrbanObstruction(
+        segment_id=seg2.id,
+        title="Parkir Mobil di Trotoar Depan Ruko",
+        obstruction_type="Kendaraan Parkir di Trotoar",
+        description="4 mobil pribadi memarkir badan kendaraan di atas trotoar sehingga pejalan kaki harus turun ke badan jalan raya.",
+        location_name="Jl. Ir. H. Juanda No. 88, Ciputat",
+        latitude=-6.3112,
+        longitude=106.7562,
+        source="Laporan Warga Tangsel",
+        accessibility_impact="Jalur pedestrian dan akses difabel terblokir total",
+        ai_confidence=0.92,
+        ai_candidate_flag=True,
+        status="Verified",
+        responsible_agency="Satpol PP & Dishub",
+        is_recurring=True,
+    )
+    obs2 = UrbanObstruction(
+        segment_id=seg3.id,
+        title="Gerobak PKL Menutup Jalur Pemandu Difabel",
+        obstruction_type="PKL / Barang Dagangan Menghalangi Jalur",
+        description="Dua gerobak penjual gorengan menggelar terpal dan meja menutupi ruang pedestrian.",
+        location_name="Jl. Surya Kencana Simpang Pamulang",
+        latitude=-6.3455,
+        longitude=106.7401,
+        source="Patroli Lapangan Kecamatan",
+        accessibility_impact="Sisa ruang pejalan kaki < 0.6 meter",
+        ai_confidence=0.88,
+        ai_candidate_flag=True,
+        status="Pending Verification",
+        responsible_agency="Satpol PP Pamulang",
+        is_recurring=False,
+    )
+    db.add_all([obs1, obs2])
+
+    # Vendor Zones & Records
+    vz1 = StreetVendorZone(
+        zone_name="Sentra Kuliner Tertata Taman Kota 1 BSD",
+        district="Serpong",
+        location_description="Area Pujasera Terkelola Taman Kota 1 Serpong",
+        legal_basis="Keputusan Walikota No. 511.2/Kep.142-Disperindag/2024",
+        authorized_by="Disperindag Kota Tangerang Selatan",
+        active_hours="16:00 - 23:00 WIB",
+        max_capacity_stalls=25,
+        current_registered_stalls=18,
+        mandatory_free_pedestrian_width_meters=3.0,
+        is_legal=True,
+    )
+    db.add(vz1)
+    db.flush()
+
+    vr1 = StreetVendorRecord(
+        zone_id=vz1.id,
+        vendor_code="PKL-TKN-001",
+        business_type="Kuliner Khas Daerah / Minuman Herbal",
+        stall_number="A-04",
+        stall_size_sqm=4.0,
+        verification_status="Terdaftar Resmi",
+        cleanliness_score=90.0,
+        coaching_history=[{"date": "2026-02-15", "topic": "Pelatihan Higienitas & Pengelolaan Sampah"}],
+    )
+    db.add(vr1)
+
+    # Hotspots
+    hs1 = UrbanHotspot(
+        title="Simpang Pasar Ciputat - Kabel Semrawut & Hambatan Trotoar",
+        issue_type="Kabel Semrawut & Parkir Trotoar",
+        location_name="Flyover & Pasar Ciputat",
+        district="Ciputat",
+        latitude=-6.3128,
+        longitude=106.7569,
+        incident_count_30d=14,
+        peak_hours="06:30 - 09:00 & 16:30 - 19:30",
+        severity="Critical",
+        lead_agency="Dishub, Satpol PP & Disperkim",
+        status="Fokus Penertiban Terpadu",
+    )
+    hs2 = UrbanHotspot(
+        title="Koridor Kampus Pamulang - PKL Meluber Jalur Pejalan Kaki",
+        issue_type="Hambatan Trotoar",
+        location_name="Jl. Surya Kencana Kampus Unpam",
+        district="Pamulang",
+        latitude=-6.3440,
+        longitude=106.7395,
+        incident_count_30d=9,
+        peak_hours="11:30 - 13:30 & 17:00 - 20:00",
+        severity="High",
+        lead_agency="Satpol PP & Kecamatan Pamulang",
+        status="Penataan Berjalan",
+    )
+    db.add_all([hs1, hs2])
+
+    # WalkPoints
+    wp_prog = WalkpointProgram(
+        title="Tangsel Melangkah: Mobilitas Bersih & Sehat",
+        description="Program insentif pejalan kaki pada koridor publik yang tertata. Poin dapat ditukarkan voucher mitra UMKM lokal.",
+        funding_source="CSR Kemitraan Lingkungan & Program APBD Dispora/Dishub",
+        points_per_km=50,
+        daily_cap_points=250,
+        is_active=True,
+    )
+    db.add(wp_prog)
+
+    wp_acc = WalkpointAccount(
+        participant_name="Budi Santoso (Pejalan Terdaftar)",
+        balance_points=320,
+        lifetime_points_earned=680,
+        total_km_walked=13.6,
+        tier="Pejalan Unggul",
+        is_active=True,
+    )
+    db.add(wp_acc)
+    db.flush()
+
+    wp_tx1 = WalkpointTransaction(
+        account_id=wp_acc.id,
+        tx_type="CHECKIN_QR",
+        points_delta=50,
+        location_corridor="Jl. Pahlawan Seribu - Segmen BSD",
+        note="Check-in koridor pedestrian terawat",
+        anti_fraud_status="Verified Valid",
+    )
+    wp_reward1 = WalkpointReward(
+        partner_merchant_name="Kopi Sahabat UMKM Serpong",
+        reward_title="Diskon Kopi & Snack 20% (Max Rp 15.000)",
+        category="Voucher UMKM",
+        points_required=100,
+        stock_available=45,
+        terms="Berlaku untuk pejalan kaki terverifikasi WalkPoints di gerai BSD.",
+    )
+    db.add_all([wp_tx1, wp_reward1])
+
+    # Official Payment Audit Record (Perda/Tibum)
+    pay_audit = OfficialPaymentAudit(
+        case_or_obstruction_id="AUDIT-OBS-2026-01",
+        reference_number="REF-TIBUM-TGL-2026-0089",
+        subject_title="Pelanggaran Parkir di Atas Trotoar Ir. Juanda",
+        legal_basis_check="Perda Kota Tangsel No. 9 Tahun 2022 tentang Ketertiban Umum",
+        determination_status="Awaiting Authorized Determination",
+        collection_readiness="SIMULATION / NOT ENABLED FOR COLLECTION",
+        official_channel="Kas Daerah via Bank BJB / Bapenda Official Gateway",
+        reconciliation_status="Not Applicable",
+        audit_notes="Pungutan denda di aplikasi tidak diaktifkan sebelum penetapan vonis hakim/pejabat berwenang dan integrasi kas daerah sah.",
+    )
+    db.add(pay_audit)
+    db.commit()
+
+
+def seed_talent(db: Session) -> None:
+    if db.scalar(select(TalentProfile).limit(1)):
+        return
+
+    now = datetime.now(UTC)
+
+    # Talent Profiles
+    p1 = TalentProfile(
+        nip="198804122010011002",
+        full_name="Budi Santoso, S.STP, M.AP",
+        agency_opd="Bagian Perekonomian dan Pembangunan",
+        current_position="Subkoordinator Pengendalian Pembangunan Daerah",
+        echelon_or_class="Jabatan Fungsional Keahlian Madya",
+        rank_group="Pembina (IV/a)",
+        education_level="S2",
+        major="Administrasi Publik",
+        years_in_position=3.5,
+        performance_score_official=94.2,
+        potential_score_official=91.0,
+        nine_box_position=9,  # Box 9: Top Talent
+        nine_box_status="Disahkan Komite Talenta Daerah",
+        data_completeness_pct=98.0,
+        verification_status="Terverifikasi BKPSDM & SIASN BKN",
+        career_aspirations="Kepala Bagian Ekbang / Kepala Bidang Bappeda",
+        certifications=[{"name": "Sertifikasi Manajemen Kinerja ASN", "year": 2024, "issuer": "Puslatbang BKN"}],
+        project_assignments=[{"project": "Tim Task Force Wasdal Inflasi & Stunting", "role": "Ketua Tim Teknis"}],
+    )
+    p2 = TalentProfile(
+        nip="199105232014022003",
+        full_name="Rina Kartika, S.Kom, M.T.",
+        agency_opd="Dinas Komunikasi dan Informatika",
+        current_position="Pranata Komputer Ahli Muda",
+        echelon_or_class="Jabatan Fungsional Keahlian Muda",
+        rank_group="Penata Tk. I (III/d)",
+        education_level="S2",
+        major="Teknologi Informasi",
+        years_in_position=2.8,
+        performance_score_official=88.5,
+        potential_score_official=92.4,
+        nine_box_position=8,  # Box 8: Future Leader
+        nine_box_status="Disahkan Komite Talenta Daerah",
+        data_completeness_pct=95.0,
+        verification_status="Terverifikasi BKPSDM & SIASN BKN",
+        career_aspirations="Kepala Bidang Infrastruktur TIK / Smart City",
+        certifications=[{"name": "Certified Enterprise Architecture & SPBE", "year": 2025, "issuer": "KemenPAN-RB"}],
+        project_assignments=[{"project": "Pengembangan Digital Twin Ruang Kota Wasdal", "role": "Lead Architect"}],
+    )
+    p3 = TalentProfile(
+        nip="198509172009021004",
+        full_name="Ahmad Fauzi, S.T.",
+        agency_opd="Dinas Sumber Daya Air, Bina Marga dan Bina Konstruksi",
+        current_position="Teknik Pengairan Ahli Muda",
+        echelon_or_class="Jabatan Fungsional Keahlian Muda",
+        rank_group="Penata Tk. I (III/d)",
+        education_level="S1",
+        major="Teknik Sipil",
+        years_in_position=4.2,
+        performance_score_official=91.0,
+        potential_score_official=74.5,
+        nine_box_position=6,  # Box 6: High Performer
+        nine_box_status="Disahkan Komite Talenta Daerah",
+        data_completeness_pct=90.0,
+        verification_status="Terverifikasi BKPSDM",
+        career_aspirations="Kepala Seksi Drainase & Pengendalian Banjir",
+        certifications=[{"name": "Keahlian Pengawasan Jaringan Utilitas dan Drainase", "year": 2023, "issuer": "LPJK"}],
+        project_assignments=[{"project": "Satgas Kabel Udara & Trotoar Ciputat", "role": "Koordinator Lapangan"}],
+    )
+    p4 = TalentProfile(
+        nip="199302142018012001",
+        full_name="Siti Nurhaliza, S.E.",
+        agency_opd="Badan Perencanaan Pembangunan Daerah (Bappeda)",
+        current_position="Perencana Ahli Pertama",
+        echelon_or_class="Jabatan Fungsional Keahlian Pertama",
+        rank_group="Penata Muda Tk. I (III/b)",
+        education_level="S1",
+        major="Ekonomi Pembangunan",
+        years_in_position=2.1,
+        performance_score_official=82.5,
+        potential_score_official=79.0,
+        nine_box_position=5,  # Box 5: Core Talent
+        nine_box_status="Disahkan Komite Talenta Daerah",
+        data_completeness_pct=89.0,
+        verification_status="Terverifikasi BKPSDM",
+        career_aspirations="Perencana Madya Bidang Evaluasi RPJMD",
+        certifications=[{"name": "Sertifikasi Perencana Pembangunan Daerah", "year": 2024, "issuer": "Pusbindiklatren Bappenas"}],
+        project_assignments=[{"project": "Penyelarasan Indikator Kinerja Wasdal-RKPD", "role": "Anggota Tim Analis"}],
+    )
+    db.add_all([p1, p2, p3, p4])
+    db.flush()
+
+    # Data Sources
+    ds1 = TalentDataSource(source_name="SIASN BKN", data_type="Data Pokok ASN & Riwayat Kepangkatan", last_sync_at=now - timedelta(hours=6), sync_status="Connected - Official API")
+    ds2 = TalentDataSource(source_name="e-Kinerja BKN", data_type="Hasil SKP dan Evaluasi Kinerja Tahunan", last_sync_at=now - timedelta(hours=12), sync_status="Connected - Official API")
+    ds3 = TalentDataSource(source_name="SIMPEG Pemkot Tangerang Selatan", data_type="Riwayat Jabatan & Diklat Lokal", last_sync_at=now - timedelta(hours=2), sync_status="Active Database Sync")
+    db.add_all([ds1, ds2, ds3])
+
+    # Data Quality Issues
+    dqi1 = TalentDataQualityIssue(
+        nip=p3.nip,
+        employee_name=p3.full_name,
+        agency_opd=p3.agency_opd,
+        issue_type="Conflicting",
+        description="Nama jabatan pada SK mutasi terakhir berbeda 1 kata dengan data di SIASN BKN.",
+        field_name="current_position",
+        correction_owner="Admin Kepegawaian DSDABMBK",
+        status="In Correction",
+    )
+    dqi2 = TalentDataQualityIssue(
+        nip=p4.nip,
+        employee_name=p4.full_name,
+        agency_opd=p4.agency_opd,
+        issue_type="Incomplete",
+        description="Berkas digital sertifikat pelatihan perencana belum diunggah ke repositori arsip.",
+        field_name="certifications_evidence",
+        correction_owner="Siti Nurhaliza (Mandiri)",
+        status="Pending Verification",
+    )
+    db.add_all([dqi1, dqi2])
+
+    # Socialization Materials
+    mat1 = TalentSocializationMaterial(
+        title="Pedoman Manajemen Talenta ASN Berdasarkan Sistem Merit",
+        category="Regulasi & Pedoman",
+        summary="Panduan lengkap implementasi talent acquisition, talent mapping 9-box, talent development, dan succession planning.",
+        official_source_doc="Peraturan Menteri PAN-RB No. 3 Tahun 2020",
+        file_url="/docs/permenpanrb-3-2020.pdf",
+        read_count=184,
+        quiz_available=True,
+    )
+    mat2 = TalentSocializationMaterial(
+        title="Infografis: Cara Memahami 9 Box Kinerja & Potensi",
+        category="Infografis & Media",
+        summary="Penjelasan visual definisi kotak 1 sampai kotak 9, hakikat penilaian objektif, dan langkah penyusunan rencana IDP.",
+        official_source_doc="Surat Edaran BKPSDM Kota Tangerang Selatan No. 800/2025",
+        file_url="/docs/infografis-9box-tangsel.pdf",
+        read_count=320,
+        quiz_available=False,
+    )
+    db.add_all([mat1, mat2])
+
+    # Socialization Events
+    ev1 = TalentSocializationEvent(
+        event_title="Sosialisasi Akbar: Percepatan Sistem Merit & Validasi Data Talenta ASN Tangsel",
+        event_date=now + timedelta(days=7),
+        location_or_link="Aula Lantai 4 Gedung Pemkot Tangerang Selatan / Hybrid Zoom",
+        speakers="Kepala BKPSDM Tangsel & Asisten Komisioner KASN / Deputi BKN",
+        target_audience="Sekretaris OPD, Kepala Subbagian Kepegawaian se-Kota Tangerang Selatan",
+        attendance_count=168,
+        max_quota=200,
+        status="Upcoming",
+    )
+    db.add(ev1)
+
+    # Competencies
+    comp1 = TalentCompetency(
+        code="COMP-MAN-01",
+        name="Integritas dan Etika Birokrasi",
+        cluster="Manajerial",
+        description="Konsistensi berperilaku selaras dengan nilai, norma, dan etika organisasi dalam tugas kedinasan.",
+        standard_level=4,
+        behavior_indicators=["Menciptakan situasi kerja yang transparan", "Berani menolak gratifikasi dan intervensi menyimpang"],
+    )
+    comp2 = TalentCompetency(
+        code="COMP-MAN-02",
+        name="Kerjasama Lintas Sektor & Inovasi",
+        cluster="Manajerial",
+        description="Kemampuan membangun aliansi kerja lintas OPD dan menyelesaikan persoalan riil di lapangan.",
+        standard_level=3,
+        behavior_indicators=["Menginisiasi solusi bersama lintas instansi", "Menghubungkan target RPJMD dengan penugasan lapangan"],
+    )
+    comp3 = TalentCompetency(
+        code="COMP-TEK-01",
+        name="Pengendalian Pembangunan & Kebijakan Ekbang",
+        cluster="Teknis",
+        description="Keahlian teknis merumuskan rekomendasi percepatan, pengendalian inflasi, dan pemantauan proyek strategis.",
+        standard_level=4,
+        behavior_indicators=["Menganalisis deviasi fisik vs keuangan", "Menyusun skema percepatan tindak lanjut rapat Wasdal"],
+    )
+    db.add_all([comp1, comp2, comp3])
+    db.flush()
+
+    # Assessments
+    ass1 = TalentAssessment(
+        profile_id=p1.id,
+        competency_id=comp1.id,
+        current_level=4,
+        required_level=4,
+        gap=0,
+        assessment_body="Asesmen Center BKN Terakreditasi A",
+        development_recommendation="Pertahankan standar etika dan jadilah role model bagi pegawai muda.",
+    )
+    ass2 = TalentAssessment(
+        profile_id=p1.id,
+        competency_id=comp2.id,
+        current_level=4,
+        required_level=3,
+        gap=1,
+        assessment_body="Asesmen Center BKN Terakreditasi A",
+        development_recommendation="Siap memimpin proyek strategis kolaborasi antar instansi.",
+    )
+    db.add_all([ass1, ass2])
+
+    # Talent Pools
+    pool1 = TalentPool(
+        name="Talent Pool Administrator / Kepala Bagian",
+        description="Kelompok ASN berkinerja tinggi dan berpotensi tinggi untuk suksesi jabatan administrator (Eselon III).",
+        category="Kepemimpinan",
+        criteria_rule="Nine Box 8 atau 9, Nilai SKP >= 85, Rekomendasi Bebas Temuan Inspektorat",
+        total_qualified_members=12,
+    )
+    pool2 = TalentPool(
+        name="Talent Pool Inovasi Digital & Smart City",
+        description="Kelompok ASN penggerak transformasi sistem SPBE, digital twin ruang kota, dan integrasi data.",
+        category="Digital & Inovasi",
+        criteria_rule="Keahlian TI/Teknis, Sertifikasi SPBE/Data, Proyek inovasi terverifikasi",
+        total_qualified_members=18,
+    )
+    db.add_all([pool1, pool2])
+
+    # IDP
+    idp1 = TalentIDP(
+        profile_id=p1.id,
+        year=2026,
+        target_career_objective="Kesiapan Jabatan Pimpinan Tinggi Pratama / Administrator Utama",
+        mentor_or_coach="Asisten Daerah Bidang Perekonomian dan Pembangunan",
+        approval_status="Disetujui Atasan Langsung",
+        overall_progress_pct=75.0,
+        evaluation_notes="Menunjukkan komitmen tinggi dan aktif dalam penyelesaian kasus Wasdal berisiko tinggi.",
+    )
+    db.add(idp1)
+    db.flush()
+
+    idp_act1 = TalentIDPActivity(
+        idp_id=idp1.id,
+        activity_type="Pelatihan Kepemimpinan",
+        title="Pelatihan Kepemimpinan Administrator (PKA) Angkatan V",
+        competency_targeted="Kerjasama Lintas Sektor & Inovasi Kepemimpinan",
+        deadline=now + timedelta(days=60),
+        progress_status="In Progress",
+        verified_by_supervisor=True,
+    )
+    idp_act2 = TalentIDPActivity(
+        idp_id=idp1.id,
+        activity_type="Penugasan Khusus",
+        title="Lead Koordinator Pengendalian Inflasi dan Stabilisasi Pangan Wasdal",
+        competency_targeted="Pengendalian Pembangunan & Kebijakan Ekbang",
+        deadline=now + timedelta(days=30),
+        progress_status="Completed",
+        verified_by_supervisor=True,
+    )
+    db.add_all([idp_act1, idp_act2])
+
+    # Critical Positions & Succession
+    cp1 = TalentCriticalPosition(
+        position_title="Kepala Bagian Perekonomian dan Pembangunan (Ekbang)",
+        agency_opd="Sekretariat Daerah",
+        urgency_level="Critical",
+        vacancy_risk_reason="Pejabat definitif memasuki batas usia pensiun (BUP) dalam 7 bulan.",
+        current_incumbent_name="Drs. H. Mulyadi, M.Si",
+        retirement_estimated_date=now + timedelta(days=210),
+        required_competencies_summary="Keahlian kepemimpinan koordinasi 14 OPD teknis, pengendalian inflasi, dan monitoring RPJMD.",
+    )
+    db.add(cp1)
+    db.flush()
+
+    sp1 = TalentSuccessionPlan(
+        position_id=cp1.id,
+        candidate_profile_id=p1.id,
+        readiness_status="Ready Now",
+        readiness_score=94.0,
+        competency_gap_summary="Kompetensi manajerial dan teknis terpenuhi 100%. Telah memimpin tim Wasdal dengan capaian target terverifikasi.",
+        development_action_plan="Pemberian wewenang Plh bila diperlukan transisi penugasan.",
+        verified_by_committee=True,
+    )
+    sp2 = TalentSuccessionPlan(
+        position_id=cp1.id,
+        candidate_profile_id=p3.id,
+        readiness_status="Ready < 1 Year",
+        readiness_score=82.5,
+        competency_gap_summary="Perlu pemenuhan sertifikasi kepemimpinan administrator dan pemahaman makroekonomi daerah.",
+        development_action_plan="Ikut serta dalam mentoring berkala bersama Tim Asda Ekbang.",
+        verified_by_committee=True,
+    )
+    db.add_all([sp1, sp2])
+
+    # Mobility Recommendation
+    mr1 = TalentMobilityRecommendation(
+        candidate_profile_id=p2.id,
+        recommended_target_position="Kepala Seksi Integrasi Data & SPBE",
+        target_agency_opd="Dinas Komunikasi dan Informatika",
+        match_score_pct=94.5,
+        rationale_why="Sesuai kompetensi enterprise architecture dan rekam jejak sukses membangun pipeline digital twin Wasdal.",
+        factors_considered=["Kesesuaian Kompetensi Teknis (96%)", "Kinerja SKP Sangat Baik (88.5%)", "Potensi Kepemimpinan Masa Depan"],
+        review_status="Direkomendasikan ke Tim Penilai Kinerja BKPSDM",
+    )
+    db.add(mr1)
+
+    # Implementation Milestones
+    m1 = TalentImplementationMilestone(
+        phase_order=1,
+        phase_name="Penyusunan Regulasi & Pedoman Sistem Merit",
+        target_description="Pengesahan Perwal Manajemen Talenta & SOP Komite Talenta Pemkot Tangsel.",
+        lead_pic="BKPSDM & Bagian Hukum Setda",
+        deadline=now - timedelta(days=90),
+        status="Completed",
+        evidence_notes="Perwal No. 24 Tahun 2025 telah diundangkan.",
+    )
+    m2 = TalentImplementationMilestone(
+        phase_order=2,
+        phase_name="Sosialisasi & Edukasi Manajemen Talenta ASN",
+        target_description="Sosialisasi 100% OPD dan asesmen pemahaman materi regulasi.",
+        lead_pic="Bidang Pengembangan Karir BKPSDM",
+        deadline=now - timedelta(days=20),
+        status="Completed",
+        evidence_notes="Telah terlaksana pada 36 unit kerja perangkat daerah.",
+    )
+    m3 = TalentImplementationMilestone(
+        phase_order=3,
+        phase_name="Integrasi Kualitas Data SIASN & SIMPEG",
+        target_description="Penyelesaian data conflicting dan unverified pada seluruh pegawai eselon III dan IV.",
+        lead_pic="Subbidang Data & Informasi Kepegawaian",
+        deadline=now + timedelta(days=15),
+        status="In Progress",
+        evidence_notes="Pencapaian verifikasi saat ini 92.4%.",
+    )
+    m4 = TalentImplementationMilestone(
+        phase_order=4,
+        phase_name="Asesmen Kompetensi Terakreditasi BKN",
+        target_description="Pelaksanaan uji kompetensi terstandar untuk seluruh pemangku jabatan kritis.",
+        lead_pic="Pusat Asesmen BKPSDM Banten / BKN",
+        deadline=now + timedelta(days=45),
+        status="In Progress",
+        evidence_notes="Gelombang I selesai 120 orang, gelombang II dalam penjadwalan.",
+    )
+    m5 = TalentImplementationMilestone(
+        phase_order=5,
+        phase_name="Sidang Komite Talenta & Penetapan 9-Box Resmi",
+        target_description="Sidang penetapan talent pool dan succession planning jabatan eselon III prioritas.",
+        lead_pic="Sekda selaku Ketua Komite Talenta",
+        deadline=now + timedelta(days=70),
+        status="Pending Decision",
+        evidence_notes="Menunggu penyelesaian asesmen gelombang II.",
+    )
+    db.add_all([m1, m2, m3, m4, m5])
+
     db.commit()
