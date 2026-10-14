@@ -129,7 +129,21 @@ export async function transcribeAudio(fileOrBlob: Blob | File, filename: string)
 
   if (!res.ok) {
     const errorText = await res.text().catch(() => "Unknown error");
-    throw new Error(`Gagal mentranskrip audio (${res.status}): ${errorText}`);
+    let cleanMessage = errorText;
+    try {
+      const parsed = JSON.parse(errorText);
+      if (parsed.detail) {
+        const detailStr = typeof parsed.detail === "string" ? parsed.detail : JSON.stringify(parsed.detail);
+        if (detailStr.includes("insufficient_quota") || detailStr.includes("credit_balance_exhausted") || detailStr.includes("429")) {
+          cleanMessage = "Kuota / Saldo kredit OpenAI API di server telah habis (Error 429 - Insufficient Quota). Silakan lakukan top-up saldo OpenAI di platform.openai.com atau ketik / tempel transkrip rapat langsung pada kolom teks di bawah.";
+        } else {
+          cleanMessage = detailStr;
+        }
+      }
+    } catch {
+      // ignore JSON parse error
+    }
+    throw new Error(cleanMessage);
   }
   return res.json();
 }

@@ -975,13 +975,22 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
                 </div>
               )}
               
-              {transcriptText && (
-                <div className="mt-4 p-3 bg-background rounded border border-border text-xs">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="font-semibold text-foreground flex items-center gap-1.5">
-                      <CheckCircle2 size={14} className="text-emerald-500" />
-                      Transkrip Rapat Siap ({transcriptText.split(/\s+/).filter(Boolean).length} kata):
-                    </div>
+              <div className="mt-4 p-3 bg-background rounded border border-border text-xs">
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="font-semibold text-foreground flex items-center gap-1.5">
+                    {transcriptText ? (
+                      <>
+                        <CheckCircle2 size={14} className="text-emerald-500" />
+                        Transkrip Rapat Siap ({transcriptText.split(/\s+/).filter(Boolean).length} kata):
+                      </>
+                    ) : (
+                      <>
+                        <FileText size={14} className="text-primary" />
+                        Teks / Draf Notulen Rapat:
+                      </>
+                    )}
+                  </div>
+                  {transcriptText && (
                     <button
                       type="button"
                       onClick={() => setTranscriptText("")}
@@ -989,16 +998,16 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
                     >
                       Hapus
                     </button>
-                  </div>
-                  <textarea
-                    value={transcriptText}
-                    onChange={(e) => setTranscriptText(e.target.value)}
-                    rows={4}
-                    className="w-full rounded bg-muted/40 p-2 text-xs text-foreground border border-border/50 focus:outline-none focus:ring-1 focus:ring-primary"
-                    placeholder="Hasil transkripsi rapat akan muncul di sini dan dapat diedit..."
-                  />
+                  )}
                 </div>
-              )}
+                <textarea
+                  value={transcriptText}
+                  onChange={(e) => setTranscriptText(e.target.value)}
+                  rows={5}
+                  className="w-full rounded bg-muted/40 p-2.5 text-xs text-foreground border border-border/50 focus:outline-none focus:ring-1 focus:ring-primary font-sans leading-relaxed"
+                  placeholder="Hasil transkripsi rekaman audio akan otomatis masuk ke sini. Anda juga dapat langsung mengetik atau menempelkan (paste) catatan rapat secara manual di sini..."
+                />
+              </div>
             </div>
             
             <div className="rounded-md border border-border p-4 bg-muted/30">

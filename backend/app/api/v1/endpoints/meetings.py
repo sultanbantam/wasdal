@@ -34,7 +34,13 @@ async def transcribe_audio(file: UploadFile = File(...)) -> dict:
         text = process_document_or_audio(tmp_path, suffix, client)
         return {"text": text}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        err_msg = str(e)
+        if "insufficient_quota" in err_msg or "credit_balance_exhausted" in err_msg or "429" in err_msg:
+            raise HTTPException(
+                status_code=429,
+                detail="Kredit / Kuota OpenAI API di server telah habis (Error 429 - Insufficient Quota). Silakan lakukan top-up kredit di platform.openai.com/settings/organization/billing/ atau masukkan teks catatan rapat secara manual."
+            )
+        raise HTTPException(status_code=500, detail=err_msg)
     finally:
         if os.path.exists(tmp_path):
             try:

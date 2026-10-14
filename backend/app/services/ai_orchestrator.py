@@ -40,7 +40,15 @@ class AIOrchestrator:
             }
 
         # Lanjutkan jika aman
-        return self.graph.run_intake(raw_text=safe_text, source=source, attachments=attachments or [])
+        try:
+            return self.graph.run_intake(raw_text=safe_text, source=source, attachments=attachments or [])
+        except Exception as e:
+            from agents.wasdal_agents import WasdalAgentGraph
+            return WasdalAgentGraph().run_intake(raw_text=safe_text, source=source, attachments=attachments or [])
 
     def meeting(self, title: str, transcript: str) -> dict:
-        return self.graph.run_meeting(title=title, transcript=transcript)
+        try:
+            return self.graph.run_meeting(title=title, transcript=transcript)
+        except Exception as e:
+            from agents.wasdal_agents import WasdalAgentGraph
+            return WasdalAgentGraph().run_meeting(title=title, transcript=transcript)
