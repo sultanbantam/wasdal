@@ -53,12 +53,12 @@ export default function NetworkHomePage() {
     <div className="space-y-6">
       {/* Hero Banner */}
       <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 p-6 text-white shadow-md">
-        <div className="relative z-10 max-w-3xl">
+        <div className="relative z-10 w-full max-w-5xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur border border-white/20 text-xs font-medium mb-3">
             <Sparkles size={14} className="text-amber-300" />
             <span>Platform Kolaborasi Kebijakan Staf Ahli se-Indonesia</span>
           </div>
-          <h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight">
+          <h2 className="text-xl sm:text-2xl lg:text-[26px] xl:text-[28px] font-extrabold tracking-tight whitespace-normal md:whitespace-nowrap">
             Satu Data, Banyak Gagasan, Solusi Bersama untuk Daerah
           </h2>
           <p className="mt-2 text-sm text-indigo-200 leading-relaxed">
