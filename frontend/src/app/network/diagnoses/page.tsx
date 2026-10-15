@@ -37,6 +37,7 @@ export default function DiagnosesPage() {
   const [optionB, setOptionB] = useState("");
   const [expertRecommendation, setExpertRecommendation] = useState("");
   const [decisionPrompt, setDecisionPrompt] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
   useEffect(() => {
     loadRegions();
@@ -109,6 +110,8 @@ export default function DiagnosesPage() {
       });
       setIsFormOpen(false);
       resetForm();
+      setSuccessMsg("Lembar diagnosis berhasil disimpan!");
+      setTimeout(() => setSuccessMsg(""), 6000);
       loadDiagnoses(selectedRegionId);
     } catch (err: any) {
       alert("Gagal menyimpan diagnosis: " + err.message);
@@ -162,6 +165,13 @@ export default function DiagnosesPage() {
           </Button>
         </div>
       </div>
+
+      {successMsg && (
+        <div className="p-3.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2.5 animate-fadeIn">
+          <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
+          <span className="font-medium">{successMsg}</span>
+        </div>
+      )}
 
       {/* AI Assistant Output Card */}
       {aiDraft && (
