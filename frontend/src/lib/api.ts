@@ -382,23 +382,7 @@ export const DEFAULT_TANGSEL_REGION = {
 };
 
 export const DEFAULT_DEMO_REGIONS = [
-  DEFAULT_TANGSEL_REGION,
-  {
-    id: "reg-banyuwangi-demo",
-    code: "35.10",
-    name: "Kabupaten Banyuwangi",
-    province: "Jawa Timur",
-    type: "Kabupaten",
-    completion_score: 88,
-  },
-  {
-    id: "reg-surakarta-demo",
-    code: "33.72",
-    name: "Kota Surakarta",
-    province: "Jawa Tengah",
-    type: "Kota",
-    completion_score: 91,
-  }
+  DEFAULT_TANGSEL_REGION
 ];
 
 export const DEFAULT_TANGSEL_INDICATORS = {
@@ -437,8 +421,8 @@ export async function getNetworkOverview() {
     return await request<any>("/network/overview");
   } catch (err) {
     return {
-      regions_count: 3,
-      verified_profiles_count: 3,
+      regions_count: 1,
+      verified_profiles_count: 1,
       active_issues_count: 1,
       ideas_count: 2,
       pending_decisions_count: 1,
@@ -456,17 +440,38 @@ export async function getNetworkOverview() {
 }
 
 export async function getNetworkRegions(region_type?: string, province?: string) {
+  // Check if user has registered regions in localStorage
+  let localRegions: any[] = [];
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem("wasdal_registered_regions");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          localRegions = parsed;
+        }
+      }
+    } catch (e) {}
+  }
+
   try {
     const params = new URLSearchParams();
     if (region_type) params.append("region_type", region_type);
     if (province) params.append("province", province);
     const q = params.toString();
     const res = await request<any[]>(q ? `/network/regions?${q}` : "/network/regions");
-    if (Array.isArray(res) && res.length > 0) return res;
-    return DEFAULT_DEMO_REGIONS;
-  } catch (err) {
-    return DEFAULT_DEMO_REGIONS;
+    if (Array.isArray(res) && res.length > 0) {
+      const map = new Map();
+      res.forEach((r) => map.set(r.id, r));
+      localRegions.forEach((r) => map.set(r.id, r));
+      return Array.from(map.values());
+    }
+  } catch (err) {}
+
+  if (localRegions.length > 0) {
+    return localRegions;
   }
+  return DEFAULT_DEMO_REGIONS;
 }
 
 export async function getRegionDetail(region_id: string) {
@@ -486,10 +491,43 @@ export async function getRegionDetail(region_id: string) {
     } catch (e) {}
   }
 
-  const regionMatch = DEFAULT_DEMO_REGIONS.find((r) => r.id === region_id) || DEFAULT_TANGSEL_REGION;
+  let localRegions: any[] = [];
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem("wasdal_registered_regions");
+      if (stored) localRegions = JSON.parse(stored) || [];
+    } catch (e) {}
+  }
+
+  const allRegions = [...localRegions, ...DEFAULT_DEMO_REGIONS];
+  const regionMatch = allRegions.find((r) => r.id === region_id) || DEFAULT_TANGSEL_REGION;
   return {
     ...regionMatch,
-    profile: cachedProfile || (regionMatch as any).profile || DEFAULT_TANGSEL_REGION.profile
+    profile: cachedProfile || (regionMatch as any).profile || {
+      leader_name: "",
+      vice_leader_name: "",
+      sekda_name: "",
+      term_period: "",
+      capital_city: "",
+      website: "",
+      expert_staff_fields: "",
+      office_address: "",
+      total_area_km2: "",
+      population: "",
+      districts_count: "",
+      villages_count: "",
+      region_characters: "",
+      growth_center_zones: "",
+      dominant_disaster_risks: "",
+      economic_growth_rate: "",
+      pdrb_trillion: "",
+      poverty_rate: "",
+      unemployment_rate: "",
+      ipm: "",
+      total_umkm: "",
+      completion_score: 0,
+      validation_status: "Draft",
+    }
   };
 }
 

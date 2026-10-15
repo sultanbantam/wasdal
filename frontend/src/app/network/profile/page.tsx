@@ -14,6 +14,8 @@ import {
   ArrowRight,
   ArrowLeft,
   Sparkles,
+  PlusCircle,
+  Trash2,
 } from "lucide-react";
 import {
   getNetworkRegions,
@@ -66,8 +68,15 @@ export default function RegionProfilePage() {
   const [saving, setSaving] = useState<boolean>(false);
   const [statusMsg, setStatusMsg] = useState<string>("");
 
+  // Modal Tambah Wilayah Baru
+  const [isAddRegionOpen, setIsAddRegionOpen] = useState<boolean>(false);
+  const [newRegionName, setNewRegionName] = useState<string>("");
+  const [newRegionType, setNewRegionType] = useState<string>("Kota");
+  const [newRegionProvince, setNewRegionProvince] = useState<string>("");
+  const [newRegionCode, setNewRegionCode] = useState<string>("");
+
   useEffect(() => {
-    // Restore from localStorage first if available
+    // Restore active profile from localStorage if available
     if (typeof window !== "undefined") {
       try {
         const cached = localStorage.getItem("wasdal_profile_data_active");
@@ -105,7 +114,6 @@ export default function RegionProfilePage() {
     try {
       const data = await getRegionDetail(regionId);
       if (data?.profile) {
-        // If localStorage has user edits, keep them prioritized
         let localEdits = null;
         if (typeof window !== "undefined") {
           try {
@@ -127,7 +135,6 @@ export default function RegionProfilePage() {
   const handleChange = (field: string, value: any) => {
     setProfileData((prev: any) => {
       const updated = { ...prev, [field]: value };
-      // Instant persistent autosave to localStorage so data is NEVER lost across tabs or navigation
       if (typeof window !== "undefined") {
         try {
           const targetId = selectedRegionId || "reg-tangsel-demo";
@@ -162,6 +169,96 @@ export default function RegionProfilePage() {
     }
   };
 
+  const handleCreateRegion = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRegionName.trim()) {
+      alert("Harap masukkan nama daerah!");
+      return;
+    }
+    const newId = "reg-" + Date.now();
+    const newEntry = {
+      id: newId,
+      code: newRegionCode.trim() || "00.00",
+      name: newRegionName.trim(),
+      province: newRegionProvince.trim() || "-",
+      type: newRegionType,
+      completion_score: 0,
+      validation_status: "Draft",
+    };
+    const updatedRegions = [...regions, newEntry];
+    setRegions(updatedRegions);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("wasdal_registered_regions", JSON.stringify(updatedRegions));
+      } catch (e) {}
+    }
+    setSelectedRegionId(newId);
+
+    // Form kosong untuk wilayah baru yang didaftarkan
+    const blankProfile = {
+      leader_name: "",
+      vice_leader_name: "",
+      sekda_name: "",
+      term_period: "",
+      capital_city: "",
+      website: "",
+      expert_staff_fields: "",
+      office_address: "",
+      total_area_km2: "",
+      population: "",
+      districts_count: "",
+      villages_count: "",
+      region_characters: "",
+      growth_center_zones: "",
+      dominant_disaster_risks: "",
+      economic_growth_rate: "",
+      pdrb_trillion: "",
+      poverty_rate: "",
+      unemployment_rate: "",
+      ipm: "",
+      total_umkm: "",
+      completion_score: 0,
+      validation_status: "Draft Baru",
+    };
+    setProfileData(blankProfile);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(`wasdal_profile_data_${newId}`, JSON.stringify(blankProfile));
+        localStorage.setItem("wasdal_profile_data_active", JSON.stringify(blankProfile));
+      } catch (e) {}
+    }
+
+    setIsAddRegionOpen(false);
+    setNewRegionName("");
+    setNewRegionProvince("");
+    setNewRegionCode("");
+    setActiveStep(1);
+    setStatusMsg(`Profil wilayah "${newEntry.name}" berhasil dibuat! Silakan mulai isi formulir di bawah.`);
+    setTimeout(() => setStatusMsg(""), 6000);
+  };
+
+  const handleDeleteCurrentRegion = () => {
+    if (regions.length <= 1) {
+      alert("Tidak dapat menghapus satu-satunya profil wilayah terdaftar.");
+      return;
+    }
+    const currentName = regions.find((r) => r.id === selectedRegionId)?.name || "wilayah ini";
+    if (confirm(`Apakah Anda yakin ingin menghapus profil ${currentName}?`)) {
+      const remaining = regions.filter((r) => r.id !== selectedRegionId);
+      setRegions(remaining);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("wasdal_registered_regions", JSON.stringify(remaining));
+          localStorage.removeItem(`wasdal_profile_data_${selectedRegionId}`);
+        } catch (e) {}
+      }
+      setSelectedRegionId(remaining[0].id);
+      loadDetail(remaining[0].id);
+      setStatusMsg(`Profil ${currentName} berhasil dihapus.`);
+      setTimeout(() => setStatusMsg(""), 4000);
+    }
+  };
+
   const completionScore = profileData?.completion_score ?? calculateCompletionScore(profileData);
 
   return (
@@ -180,28 +277,55 @@ export default function RegionProfilePage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          {regions.length > 1 && (
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Region Dropdown Selector */}
+          <div className="flex items-center gap-1.5">
             <select
               value={selectedRegionId}
               onChange={(e) => {
+                if (e.target.value === "__NEW__") {
+                  setIsAddRegionOpen(true);
+                  return;
+                }
                 setSelectedRegionId(e.target.value);
                 loadDetail(e.target.value);
               }}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500"
             >
               {regions.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name}
                 </option>
               ))}
+              <option value="__NEW__">+ Daftarkan Daerah Baru...</option>
             </select>
-          )}
+
+            <Button
+              variant="secondary"
+              onClick={() => setIsAddRegionOpen(true)}
+              className="text-xs h-8 flex items-center gap-1.5 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-300 bg-indigo-50/50 hover:bg-indigo-100 shadow-sm"
+              title="Tambah Wilayah Baru"
+            >
+              <PlusCircle size={14} />
+              <span className="hidden sm:inline">Tambah Profil Wilayah</span>
+            </Button>
+
+            {regions.length > 1 && (
+              <Button
+                variant="ghost"
+                onClick={handleDeleteCurrentRegion}
+                className="text-xs h-8 px-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                title="Hapus Wilayah Ini"
+              >
+                <Trash2 size={14} />
+              </Button>
+            )}
+          </div>
 
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="text-xs h-8 bg-indigo-600 hover:bg-indigo-500 flex items-center gap-1.5 shadow-sm"
+            className="text-xs h-8 bg-indigo-600 hover:bg-indigo-500 flex items-center gap-1.5 shadow-sm text-white"
           >
             <Save size={14} />
             <span>{saving ? "Menyimpan..." : "Simpan Profil (Autosave)"}</span>
@@ -588,6 +712,95 @@ export default function RegionProfilePage() {
           )}
         </div>
       </div>
+
+      {/* MODAL: DAFTARKAN / TAMBAH WILAYAH BARU */}
+      {isAddRegionOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-slate-900 rounded-xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <Building2 className="text-indigo-600" size={20} />
+                <h3 className="font-bold text-sm">Tambah Profil Wilayah Baru</h3>
+              </div>
+              <button
+                onClick={() => setIsAddRegionOpen(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Staf Ahli Kepala Daerah dapat mendaftarkan kabupaten/kota/provinsi baru di sini untuk mulai mengisi basis data profil wilayah.
+            </p>
+
+            <form onSubmit={handleCreateRegion} className="space-y-3.5 text-xs">
+              <div>
+                <label className="font-semibold block mb-1">Nama Daerah Pemerintah *</label>
+                <input
+                  type="text"
+                  value={newRegionName}
+                  onChange={(e) => setNewRegionName(e.target.value)}
+                  placeholder="misal: Kabupaten Serang atau Kota Bandung"
+                  className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-semibold block mb-1">Tingkat Wilayah</label>
+                  <select
+                    value={newRegionType}
+                    onChange={(e) => setNewRegionType(e.target.value)}
+                    className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                  >
+                    <option value="Kota">Kota</option>
+                    <option value="Kabupaten">Kabupaten</option>
+                    <option value="Provinsi">Provinsi</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-semibold block mb-1">Provinsi *</label>
+                  <input
+                    type="text"
+                    value={newRegionProvince}
+                    onChange={(e) => setNewRegionProvince(e.target.value)}
+                    placeholder="misal: Banten / Jawa Barat"
+                    className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-semibold block mb-1">Kode Wilayah Kemendagri (Opsional)</label>
+                <input
+                  type="text"
+                  value={newRegionCode}
+                  onChange={(e) => setNewRegionCode(e.target.value)}
+                  placeholder="misal: 36.04 atau 32.73"
+                  className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <Button type="button" variant="ghost" onClick={() => setIsAddRegionOpen(false)} className="text-xs">
+                  Batal
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white"
+                >
+                  Buat Profil & Buka Formulir
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
