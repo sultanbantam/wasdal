@@ -48,6 +48,13 @@ DEFAULT_ROLES = [
     "Sekretariat",
     "Perangkat Daerah",
     "Guest",
+    "Super Admin Nasional",
+    "Koordinator Nasional",
+    "Admin Daerah",
+    "Staf Ahli Kepala Daerah",
+    "Kontributor OPD",
+    "Pimpinan Daerah",
+    "Viewer Publik",
 ]
 
 PRIORITY_WEIGHTS = {

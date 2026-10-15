@@ -379,3 +379,268 @@ export type TalentMilestoneItem = {
   evidence_notes?: string | null;
   decision_required_id?: string | null;
 };
+
+// ==========================================
+// JEJARING STAF AHLI TYPES
+// ==========================================
+
+export type NetworkRegionItem = {
+  id: string;
+  code: string;
+  name: string;
+  region_type: string;
+  province_name: string;
+  is_active: boolean;
+  is_demo: boolean;
+  completion_score: number;
+  validation_status: string;
+  population?: number | null;
+  leader_name?: string | null;
+  updated_at?: string | null;
+};
+
+export type RegionProfileData = {
+  capital_city: string;
+  office_address: string;
+  website: string;
+  leader_name: string;
+  vice_leader_name: string;
+  sekda_name: string;
+  term_period: string;
+  expert_staff_count: number;
+  expert_staff_fields: string;
+  total_area_km2: number;
+  districts_count: number;
+  villages_count: number;
+  population: number;
+  density_per_km2: number;
+  region_characters: string;
+  growth_center_zones: string;
+  dominant_disaster_risks: string;
+  economic_growth_rate: number;
+  pdrb_trillion: number;
+  poverty_rate: number;
+  unemployment_rate: number;
+  gini_ratio: number;
+  ipm: number;
+  total_umkm: number;
+  completion_score: number;
+  validation_status: string;
+  last_verified_at?: string | null;
+  last_verified_by?: string | null;
+};
+
+export type RegionDetailData = {
+  region: {
+    id: string;
+    code: string;
+    name: string;
+    region_type: string;
+    province_name: string;
+    is_demo: boolean;
+  };
+  profile: RegionProfileData | null;
+  team_members: Array<{
+    id: string;
+    user_name: string;
+    user_email: string;
+    role: string;
+    agency?: string | null;
+    is_active: boolean;
+  }>;
+};
+
+export type NetworkIndicatorDef = {
+  code: string;
+  name: string;
+  category: string;
+  unit: string;
+  formula_description?: string | null;
+  default_source: string;
+  is_mandatory: boolean;
+};
+
+export type NetworkIndicatorVal = {
+  id: string;
+  region_id: string;
+  indicator_code: string;
+  indicator_name: string;
+  category: string;
+  year: number;
+  value: number;
+  unit: string;
+  source: string;
+  status_data: string;
+  notes?: string | null;
+};
+
+export type NetworkStrategicIssueItem = {
+  id: string;
+  region_id: string;
+  title: string;
+  summary: string;
+  category: string;
+  location_name: string;
+  authority_level: string;
+  target_opd: string;
+  affected_groups: string;
+  urgency_level: string;
+  impact_level: string;
+  priority_score: number;
+  status: string;
+  pic_name?: string | null;
+  deadline_target?: string | null;
+  linked_rpjmd_indicator?: string | null;
+  decision_required: boolean;
+  created_at: string;
+};
+
+export type NetworkDiagnosisItem = {
+  id: string;
+  region_id: string;
+  issue_id?: string | null;
+  problem_statement: string;
+  baseline_condition: string;
+  root_cause: string;
+  program_gaps: string;
+  inaction_risks: string;
+  solution_options: Array<{
+    code: string;
+    label?: string;
+    title?: string;
+    cost?: string;
+    impact?: string;
+  }>;
+  expert_recommendation: string;
+  decision_prompt?: string | null;
+  status: string;
+  author_name: string;
+  created_at: string;
+};
+
+export type NetworkFiscalData = {
+  snapshots: Array<{
+    id: string;
+    year: number;
+    total_revenue_billion: number;
+    pad_billion: number;
+    transfer_revenue_billion: number;
+    total_expenditure_billion: number;
+    personnel_expenditure_billion: number;
+    capital_expenditure_billion: number;
+    silpa_billion: number;
+    pad_ratio_pct: number;
+    transfer_dependency_pct: number;
+    personnel_ratio_pct: number;
+    capital_ratio_pct: number;
+    fiscal_space_level: string;
+    notes?: string | null;
+  }>;
+  roadmap: {
+    id: string;
+    title: string;
+    target_year: number;
+    efficiency_programs: string;
+    pad_optimization_strategy: string;
+    asset_optimization_strategy: string;
+    central_support_needs: string;
+    lead_agency: string;
+    status: string;
+  } | null;
+  disclaimer: string;
+};
+
+export type NetworkIdeaItem = {
+  id: string;
+  region_id: string;
+  title: string;
+  summary_plain: string;
+  novelty_element: string;
+  target_beneficiaries: string;
+  category: string;
+  primary_opd: string;
+  estimated_budget_million: number;
+  funding_source_options: string;
+  readiness_status: string;
+  impact_vs_effort: string;
+  is_replicable: boolean;
+  interested_regions_count: number;
+  created_at: string;
+};
+
+export type NetworkPilotItem = {
+  id: string;
+  region_id: string;
+  title: string;
+  template_type: string;
+  location: string;
+  pic_team: string;
+  duration_months: number;
+  progress_pct: number;
+  success_indicators: string;
+  evaluation_gate: string;
+  created_at: string;
+};
+
+export type NetworkAssetItem = {
+  id: string;
+  region_id: string;
+  name: string;
+  asset_type: string;
+  location: string;
+  managing_agency: string;
+  condition: string;
+  utilization_level_pct: number;
+  idle_time_pattern: string;
+  shared_use_potential: string;
+  required_followup?: string | null;
+  is_restricted: boolean;
+};
+
+export type NetworkFGDData = {
+  events: Array<{
+    id: string;
+    title: string;
+    theme: string;
+    organizer: string;
+    event_date: string;
+    location: string;
+    status: string;
+    invited_regions_count: number;
+    submissions_count: number;
+    summary_consensus?: string | null;
+  }>;
+  recommendations: Array<{
+    id: string;
+    fgd_event_id: string;
+    pillar: string;
+    proposal_text: string;
+    addressed_ministry: string;
+    consensus_score_pct: number;
+    status: string;
+  }>;
+};
+
+export type NetworkDecisionItem = {
+  id: string;
+  region_id: string;
+  title: string;
+  issue_brief: string;
+  urgency_reason: string;
+  options: Array<{
+    code: string;
+    title: string;
+    risk?: string;
+    benefit?: string;
+  }>;
+  expert_recommendation: string;
+  decision_owner: string;
+  deadline?: string | null;
+  inaction_impact: string;
+  status: string;
+  selected_option?: string | null;
+  disposition_notes?: string | null;
+  disposition_by?: string | null;
+  disposition_at?: string | null;
+  created_at: string;
+};

@@ -39,6 +39,23 @@ from app.models import (
     TalentSuccessionPlan,
     TalentMobilityRecommendation,
     TalentImplementationMilestone,
+    NetworkRegion,
+    RegionProfile,
+    RegionMembership,
+    NetworkIndicatorDefinition,
+    NetworkIndicatorValue,
+    NetworkStrategicIssue,
+    NetworkDiagnosis,
+    NetworkFiscalSnapshot,
+    NetworkFiscalRoadmap,
+    NetworkIdea,
+    NetworkPilotProject,
+    NetworkStrategicAsset,
+    NetworkFGDEvent,
+    NetworkFGDRecommendation,
+    NetworkDecisionRequest,
+    NetworkDataValidation,
+    NetworkAuditLog,
 )
 from app.repositories.cases import CaseRepository
 from app.schemas import CaseCreate
@@ -51,6 +68,7 @@ def init_db(db: Session) -> None:
     seed_meetings(db)
     seed_urban(db)
     seed_talent(db)
+    seed_network(db)
 
 
 def seed_users(db: Session) -> None:
@@ -922,5 +940,389 @@ def seed_talent(db: Session) -> None:
         evidence_notes="Menunggu penyelesaian asesmen gelombang II.",
     )
     db.add_all([m1, m2, m3, m4, m5])
+
+    db.commit()
+
+
+def seed_network(db: Session) -> None:
+    if db.scalar(select(NetworkRegion).where(NetworkRegion.code == "36.74")):
+        return
+
+    now = datetime.now(UTC)
+
+    # 1. Wilayah Pemerintahan (1 Provinsi, 2 Kab/Kota)
+    prov_banten = NetworkRegion(
+        code="36",
+        name="Provinsi Banten [DEMO]",
+        region_type="Provinsi",
+        province_name="Banten",
+        is_active=True,
+        is_demo=True,
+    )
+    kota_tangsel = NetworkRegion(
+        code="36.74",
+        name="Kota Tangerang Selatan [DEMO]",
+        region_type="Kota",
+        province_name="Banten",
+        is_active=True,
+        is_demo=True,
+    )
+    kab_bogor = NetworkRegion(
+        code="32.01",
+        name="Kabupaten Bogor [DEMO]",
+        region_type="Kabupaten",
+        province_name="Jawa Barat",
+        is_active=True,
+        is_demo=True,
+    )
+    db.add_all([prov_banten, kota_tangsel, kab_bogor])
+    db.flush()
+
+    # 2. Profil Daerah Tangerang Selatan & Bogor
+    profile_tangsel = RegionProfile(
+        region_id=kota_tangsel.id,
+        capital_city="Kecamatan Setu (Pusat Pemkot)",
+        office_address="Jl. Maruga No. 1, Serua, Kec. Ciputat, Kota Tangerang Selatan, Banten",
+        website="https://tangselkota.go.id",
+        leader_name="Drs. H. Benyamin Davnie",
+        vice_leader_name="H. Pilar Saga Ichsan, S.T., M.Arch",
+        sekda_name="H. Bambang Noertjahjo, S.E., Ak.",
+        term_period="2021-2026",
+        expert_staff_count=3,
+        expert_staff_fields="Bidang Perekonomian & Pembangunan; Bidang Pemerintahan & Hukum; Bidang SDM & Kemasyarakatan",
+        total_area_km2=147.19,
+        districts_count=7,
+        villages_count=54,
+        population=1384000,
+        density_per_km2=9402.8,
+        region_characters="Perkotaan Modern, Pusat Jasa, Perdagangan, Pendidikan, Penyangga Megapolitan",
+        growth_center_zones="Koridor BSD City, Kawasan Bintaro Jaya, Segitiga Emas Ciputat-Pamulang, Koridor Alam Sutera",
+        dominant_disaster_risks="Genangan luapan drainase lokal, kemacetan perlintasan komuter jam sibuk",
+        economic_growth_rate=5.48,
+        pdrb_trillion=98.42,
+        poverty_rate=2.50,
+        unemployment_rate=5.81,
+        gini_ratio=0.342,
+        ipm=82.15,
+        total_umkm=46200,
+        completion_score=94,
+        validation_status="Terverifikasi Daerah",
+        last_verified_at=now - timedelta(days=2),
+        last_verified_by="Drs. H. Heru Sudarmanto (Staf Ahli Ekbang)",
+    )
+
+    profile_bogor = RegionProfile(
+        region_id=kab_bogor.id,
+        capital_city="Cibinong",
+        office_address="Jl. Raya Tegar Beriman No. 1, Cibinong, Kab. Bogor, Jawa Barat",
+        website="https://bogorkab.go.id",
+        leader_name="Pj. Bupati Bogor",
+        vice_leader_name="-",
+        sekda_name="Sekda Kabupaten Bogor",
+        term_period="2024-2025 (Pj)",
+        expert_staff_count=3,
+        expert_staff_fields="Perekonomian, Pembangunan, Pemerintahan",
+        total_area_km2=2986.20,
+        districts_count=40,
+        villages_count=435,
+        population=5427000,
+        density_per_km2=1817.3,
+        region_characters="Agraris, Industri Manufaktur, Pariwisata Alam, Kawasan Resapan Air DAS Cisadane",
+        growth_center_zones="Kawasan Sentul, Cibinong Raya, Jalur Puncak, Koridor Cileungsi-Klapanunggal",
+        dominant_disaster_risks="Longsor tebing perbukitan, luapan sungai kali Ciliwung/Cisadane",
+        economic_growth_rate=4.95,
+        pdrb_trillion=272.50,
+        poverty_rate=7.25,
+        unemployment_rate=7.80,
+        gini_ratio=0.385,
+        ipm=71.20,
+        total_umkm=78000,
+        completion_score=78,
+        validation_status="Diajukan",
+        last_verified_at=now - timedelta(days=5),
+        last_verified_by="Admin Daerah Kab. Bogor",
+    )
+    db.add_all([profile_tangsel, profile_bogor])
+
+    # 3. Keanggotaan Tim Daerah
+    m_tangsel1 = RegionMembership(
+        region_id=kota_tangsel.id,
+        user_name="Drs. H. Heru Sudarmanto, M.Si",
+        user_email="stafahli.ekbang@tangselkota.go.id",
+        role="Staf Ahli Kepala Daerah",
+        agency="Sekretariat Daerah - Staf Ahli Ekbang",
+        is_active=True,
+    )
+    m_tangsel2 = RegionMembership(
+        region_id=kota_tangsel.id,
+        user_name="Ahmad Fauzi, S.Kom",
+        user_email="admin.jejaring@tangselkota.go.id",
+        role="Admin Daerah",
+        agency="Bagian Perekonomian dan Pembangunan (Ekbang)",
+        is_active=True,
+    )
+    db.add_all([m_tangsel1, m_tangsel2])
+
+    # 4. Master Kamus Indikator
+    ind_defs = [
+        NetworkIndicatorDefinition(
+            code="IND_MAKRO_PDRB",
+            name="PDRB Atas Dasar Harga Konstan",
+            category="Makro Ekonomi",
+            unit="Rp Triliun",
+            formula_description="Total nilai tambah bruto barang dan jasa pada periode konstan.",
+            default_source="BPS",
+            is_mandatory=True,
+        ),
+        NetworkIndicatorDefinition(
+            code="IND_MAKRO_PE",
+            name="Laju Pertumbuhan Ekonomi",
+            category="Makro Ekonomi",
+            unit="%",
+            formula_description="Pertumbuhan PDRB tahun n dibandingkan tahun n-1.",
+            default_source="BPS",
+            is_mandatory=True,
+        ),
+        NetworkIndicatorDefinition(
+            code="IND_FISKAL_PAD",
+            name="Rasio Kemandirian PAD terhadap Total Pendapatan",
+            category="Fiskal & APBD",
+            unit="%",
+            formula_description="(Realisasi PAD / Total Pendapatan Daerah) * 100",
+            default_source="BPKAD",
+            is_mandatory=True,
+        ),
+        NetworkIndicatorDefinition(
+            code="IND_FISKAL_MODAL",
+            name="Porsi Belanja Modal terhadap Total Belanja",
+            category="Fiskal & APBD",
+            unit="%",
+            formula_description="(Realisasi Belanja Modal / Total Belanja Daerah) * 100",
+            default_source="BPKAD",
+            is_mandatory=True,
+        ),
+        NetworkIndicatorDefinition(
+            code="IND_SOSIAL_IPM",
+            name="Indeks Pembangunan Manusia (IPM)",
+            category="Layanan Publik",
+            unit="Skor (0-100)",
+            formula_description="Komposit angka harapan hidup, harapan lama sekolah, dan pengeluaran riil per kapita.",
+            default_source="BPS",
+            is_mandatory=True,
+        ),
+    ]
+    db.add_all(ind_defs)
+
+    # 5. Nilai Indikator 3 Tahun (2022, 2023, 2024)
+    ind_values = [
+        NetworkIndicatorValue(region_id=kota_tangsel.id, indicator_code="IND_MAKRO_PE", indicator_name="Laju Pertumbuhan Ekonomi", category="Makro Ekonomi", year=2022, value=5.37, unit="%", source="BPS Tangsel"),
+        NetworkIndicatorValue(region_id=kota_tangsel.id, indicator_code="IND_MAKRO_PE", indicator_name="Laju Pertumbuhan Ekonomi", category="Makro Ekonomi", year=2023, value=5.48, unit="%", source="BPS Tangsel"),
+        NetworkIndicatorValue(region_id=kota_tangsel.id, indicator_code="IND_MAKRO_PE", indicator_name="Laju Pertumbuhan Ekonomi", category="Makro Ekonomi", year=2024, value=5.56, unit="%", source="BPS Tangsel (Proyeksi)"),
+        NetworkIndicatorValue(region_id=kota_tangsel.id, indicator_code="IND_FISKAL_PAD", indicator_name="Rasio Kemandirian PAD terhadap Total Pendapatan", category="Fiskal & APBD", year=2022, value=48.2, unit="%", source="BPKAD Tangsel"),
+        NetworkIndicatorValue(region_id=kota_tangsel.id, indicator_code="IND_FISKAL_PAD", indicator_name="Rasio Kemandirian PAD terhadap Total Pendapatan", category="Fiskal & APBD", year=2023, value=50.1, unit="%", source="BPKAD Tangsel"),
+        NetworkIndicatorValue(region_id=kota_tangsel.id, indicator_code="IND_FISKAL_PAD", indicator_name="Rasio Kemandirian PAD terhadap Total Pendapatan", category="Fiskal & APBD", year=2024, value=51.8, unit="%", source="BPKAD Tangsel"),
+        NetworkIndicatorValue(region_id=kota_tangsel.id, indicator_code="IND_SOSIAL_IPM", indicator_name="Indeks Pembangunan Manusia (IPM)", category="Layanan Publik", year=2022, value=81.65, unit="Skor", source="BPS"),
+        NetworkIndicatorValue(region_id=kota_tangsel.id, indicator_code="IND_SOSIAL_IPM", indicator_name="Indeks Pembangunan Manusia (IPM)", category="Layanan Publik", year=2023, value=82.15, unit="Skor", source="BPS"),
+        NetworkIndicatorValue(region_id=kota_tangsel.id, indicator_code="IND_SOSIAL_IPM", indicator_name="Indeks Pembangunan Manusia (IPM)", category="Layanan Publik", year=2024, value=82.60, unit="Skor", source="BPS"),
+    ]
+    db.add_all(ind_values)
+
+    # 6. Isu Strategis Daerah
+    issue1 = NetworkStrategicIssue(
+        region_id=kota_tangsel.id,
+        title="Optimalisasi Kemandirian Fiskal & Harmonisasi PBJT Pasca Pemberlakuan UU HKPD",
+        summary="Kebutuhan penyesuaian regulasi tarif Pajak Barang dan Jasa Tertentu (PBJT) restoran dan hiburan, pencegahan kebocoran tapping box kasir, serta insentif kepatuhan wajib pajak lokal.",
+        category="Fiskal",
+        location_name="Kawasan Pusat Kuliner & Komersial BSD - Alam Sutera - Bintaro",
+        authority_level="Kabupaten/Kota",
+        target_opd="Bapenda, Disperindag, Satpol PP",
+        affected_groups="Pelaku usaha F&B, UMKM, hotel dan restoran",
+        urgency_level="Tinggi",
+        impact_level="Tinggi",
+        priority_score=91.5,
+        status="Aktif",
+        pic_name="Kabid Pajak Daerah Bapenda Tangsel",
+        deadline_target="Triwulan IV 2026",
+        linked_rpjmd_indicator="Peningkatan Kontribusi PAD terhadap APBD di atas 52%",
+        decision_required=True,
+    )
+    db.add(issue1)
+    db.flush()
+
+    # 7. Diagnosis Staf Ahli
+    diag1 = NetworkDiagnosis(
+        region_id=kota_tangsel.id,
+        issue_id=issue1.id,
+        problem_statement="Meskipun PAD Tangsel sudah mencapai ~50% dari total APBD, potensi penerimaan PBJT jasa perhotelan, restoran, dan parkir komersial belum tervaluasi secara real-time akibat disparitas digitalisasi kasir UMKM menengah.",
+        baseline_condition="Realisasi PBJT 2023 tercapai Rp 410 Miliar. Masih terdapat ~1.200 merchant tier-2 tanpa integrasi payment gateway terdata.",
+        root_cause="Pemberlakuan UU No. 1/2022 (HKPD) mengubah klasifikasi objek pajak daerah, sementara instrumen pengawasan tapping box lama sering mengalami gangguan koneksi internet di gerai merchant.",
+        program_gaps="Program sosialisasi Bapenda belum menyertakan skema insentif timbal balik (misal cashback diskon perizinan bagi merchant taat integrasi pos).",
+        inaction_risks="Risiko potensi kehilangan penerimaan daerah (potential loss) sebesar Rp 65 - 80 Miliar per tahun yang semestinya memperkuat belanja modal infrastruktur publik.",
+        solution_options=[
+            {"code": "A", "label": "Revitalisasi Digital Tapping Box berbasis QRIS Nasional & Dashboard Kasir Terintegrasi", "cost": "Rp 1.2 Miliar", "impact": "Peningkatan akurasi pelaporan 95%"},
+            {"code": "B", "label": "Insentif Cashback Biaya Retribusi Sampah bagi Wajib Pajak Restoran Berstatus Hijau", "cost": "Rp 600 Juta", "impact": "Kepatuhan sukarela naik 40%"},
+            {"code": "C", "label": "Operasi Pengawasan Gabungan Berkala Satpol PP & Auditor Bapenda", "cost": "Rp 350 Juta", "impact": "Dampak penegakan hukum jangka pendek"},
+        ],
+        expert_recommendation="Merekomendasikan Pilihan A dikombinasikan dengan Insentif Pilihan B: Penerapan digital merchant portal terpadu disertai insentif pengurangan retribusi persampahan bagi gerai taat rekapitulasi.",
+        decision_prompt="Persetujuan Walikota untuk penerbitan Perwal Insentif Kepatuhan Wajib Pajak Daerah dan Pengadaan Dashboard Rekonsiliasi PBJT Realtime.",
+        status="Terverifikasi Daerah",
+        author_name="Drs. H. Heru Sudarmanto, M.Si (Staf Ahli Ekbang)",
+    )
+    db.add(diag1)
+
+    # 8. Snapshot Fiskal & Roadmap
+    fiscal1 = NetworkFiscalSnapshot(
+        region_id=kota_tangsel.id,
+        year=2024,
+        total_revenue_billion=4420.0,
+        pad_billion=2280.0,
+        transfer_revenue_billion=2010.0,
+        other_legal_revenue_billion=130.0,
+        total_expenditure_billion=4560.0,
+        personnel_expenditure_billion=1390.0,
+        goods_services_expenditure_billion=1580.0,
+        capital_expenditure_billion=1020.0,
+        infrastructure_expenditure_billion=850.0,
+        silpa_billion=260.0,
+        pad_ratio_pct=51.58,
+        transfer_dependency_pct=45.47,
+        personnel_ratio_pct=30.48,
+        capital_ratio_pct=22.37,
+        fiscal_space_level="Sedang",
+        notes="Ruang fiskal cukup sehat dengan belanja modal di atas 22% dan belanja pegawai terkendali di ~30%.",
+    )
+    db.add(fiscal1)
+
+    roadmap1 = NetworkFiscalRoadmap(
+        region_id=kota_tangsel.id,
+        title="Roadmap Kemandirian Fiskal & Efisiensi Belanja Kota Tangsel 2024-2026",
+        target_year=2026,
+        efficiency_programs="Audit efisiensi listrik gedung kantor dinas (penghematan 15%), digitalisasi SPPD paperless.",
+        pad_optimization_strategy="Integrasi billing PBB-P2 online, sistem self-assessment PBJT dengan validasi AI anomali omzet.",
+        asset_optimization_strategy="Pemanfaatan aset gedung eks-kantor kelurahan untuk creative hub & co-working berbayar non-tunai.",
+        central_support_needs="Dukungan penyelarasan alokasi Dana Bagi Hasil (DBH) PPh Pasal 21 dan harmonisasi regulasi insentif fiskal Kemenkeu.",
+        lead_agency="Bapenda, BPKAD, Bagian Ekbang",
+        status="Dalam Penyusunan",
+    )
+    db.add(roadmap1)
+
+    # 9. Bank Gagasan (2 Gagasan Inovasi)
+    idea1 = NetworkIdea(
+        region_id=kota_tangsel.id,
+        title="Satu Aset Banyak Manfaat: Co-working & Inkubasi UMKM di Fasilitas Publik Idle",
+        summary_plain="Memanfaatkan ruang rapat atau aula gedung kantor pemerintah yang tidak terpakai pada akhir pekan atau sore hari sebagai sentra pendampingan legalitas, foto produk, dan inkubasi UMKM muda.",
+        novelty_element="Skema pemanfaatan aset pemerintah daerah tanpa sewa memberatkan, digantikan sistem point loyalitas dan kontribusi kebersihan.",
+        target_beneficiaries="Pelaku wirausaha pemula, komunitas kreatif, mahasiswa Tangsel",
+        category="Aset & Ekonomi Kreatif",
+        primary_opd="Diskop UKM & BPKAD",
+        estimated_budget_million=180.0,
+        funding_source_options="APBD Perubahan & CSR BJB Banten",
+        readiness_status="Siap Direplikasi",
+        impact_vs_effort="High Impact / Low Effort",
+        is_replicable=True,
+        interested_regions_count=5,
+    )
+    idea2 = NetworkIdea(
+        region_id=kota_tangsel.id,
+        title="Digital Tax Rebound: Integrasi Kasir Merchant PBJT & Cashback Poin Mobilitas",
+        summary_plain="Konsumen yang bertransaksi di restoran resmi ber-PBJT mendapatkan poin loyalti WalkPoints yang dapat ditukarkan voucher diskon moda feeder transit Trans Tangsel.",
+        novelty_element="Menghubungkan kepatuhan pajak daerah dengan mobilitas hijau pejalan kaki dan angkutan umum kota.",
+        target_beneficiaries="Warga konsumen, pengelola merchant, pengguna transportasi publik",
+        category="Fiskal & Transportasi",
+        primary_opd="Bapenda & Dishub",
+        estimated_budget_million=320.0,
+        funding_source_options="APBD murni & Kemitraan Pengelola Kawasan Swasta",
+        readiness_status="Layak Uji",
+        impact_vs_effort="High Impact / High Effort",
+        is_replicable=True,
+        interested_regions_count=3,
+    )
+    db.add_all([idea1, idea2])
+
+    # 10. Proyek Percontohan (Pilot Project)
+    pilot1 = NetworkPilotProject(
+        region_id=kota_tangsel.id,
+        title="Dividen Efisiensi Gedung Pemerintah: Solar Rooftop & Smart Lighting Balai Kota",
+        template_type="Dividen Efisiensi Gedung Pemerintah",
+        location="Kompleks Balai Kota Maruga, Ciputat",
+        pic_team="Dinas Bangunan & Tata Ruang bersama Bagian Umum",
+        duration_months=6,
+        progress_pct=60,
+        success_indicators="Penurunan tagihan listrik gedung sebesar 22%, pemantauan konsumsi energi real-time via IoT dashboard.",
+        evaluation_gate="Evaluasi Gerbang 1 (Lanjut)",
+    )
+    db.add(pilot1)
+
+    # 11. Aset Strategis Daerah
+    asset1 = NetworkStrategicAsset(
+        region_id=kota_tangsel.id,
+        name="Gedung Creative Hub & Galeri Koperasi Graha Wisata BSD",
+        asset_type="Gedung / Ruang Publik",
+        location="Jl. Letnan Sutopo, BSD Sektor XIV, Serpong",
+        managing_agency="Dinas Pariwisata & Diskop UKM",
+        condition="Baik",
+        utilization_level_pct=55,
+        idle_time_pattern="Senin sampai Kamis siang (09:00 - 14:00) tingkat keterisian aula hanya 20%",
+        shared_use_potential="Dapat digunakan bersama jejaring staf ahli antardaerah untuk showroom produk unggulan UMKM binaan lintas kota.",
+        required_followup="Penyusunan SOP pemakaian bersama antar-OPD dan skema penjadwalan digital.",
+        is_restricted=False,
+    )
+    db.add(asset1)
+
+    # 12. FGD Nasional & Rekomendasi Bersama
+    fgd1 = NetworkFGDEvent(
+        title="FGD Nasional Staf Ahli Kepala Daerah: Strategi Penguatan Kemandirian Fiskal & Tata Kelola Perkotaan",
+        theme="Transformasi Fiskal Pusat dan Daerah: Menuju Kemandirian Berkeadilan",
+        organizer="Jejaring Staf Ahli Nasional bersama Pemkot Tangerang Selatan",
+        event_date=now - timedelta(days=7),
+        location="Tangerang Selatan (Hybrid)",
+        status="Selesai (Dalam Perumusan)",
+        invited_regions_count=38,
+        submissions_count=29,
+        summary_consensus="Disepakati perlunya formulasi usulan kebijakan revisi formula pembobotan DAU dan fleksibilitas pemanfaatan barang milik daerah (BMD) untuk menunjang stimulus ekonomi pasca pandemi.",
+    )
+    db.add(fgd1)
+    db.flush()
+
+    rec1 = NetworkFGDRecommendation(
+        fgd_event_id=fgd1.id,
+        pillar="Harmonisasi Alokasi DAU & Fleksibilitas Belanja Modal",
+        proposal_text="Mengusulkan kepada Kemenkeu dan Bappenas RI agar formula DAU yang ditentukan penggunaannya (earmarked) memberikan ruang diskresi 15% bagi daerah berkapasitas fiskal mandiri untuk dialokasikan pada proyek percepatan pengentasan kemiskinan dan penataan kawasan kumuh.",
+        addressed_ministry="Kementerian Keuangan & Kemendagri",
+        consensus_score_pct=94,
+        status="Siap Diserahkan",
+    )
+    db.add(rec1)
+
+    # 13. Decision Required Pimpinan Daerah
+    dec1 = NetworkDecisionRequest(
+        region_id=kota_tangsel.id,
+        title="Penetapan Perwal Tata Kelola Pemanfaatan Bersama Aset Fasilitas Publik (Creative Hub)",
+        issue_brief="Tingkat utilisasi beberapa aset gedung publik masih berkisar 50-60%. Diperlukan regulasi tingkat kepala daerah agar fasilitas dapat dimanfaatkan oleh komunitas binaan tanpa terbentur retribusi sewa kaku.",
+        urgency_reason="Optimalisasi aset harus terakomodasi sebelum pembahasan APBD Perubahan agar alokasi pemeliharaan fasilitas dapat disinergikan dengan skema kemitraan.",
+        options=[
+            {"code": "Option A", "title": "Penerbitan Perwal Pemanfaatan Aset Bersama dengan Model Subsidi Operasional 50%", "risk": "Beban APBD awal", "benefit": "Aset hidup dan UMKM tumbuh pesat"},
+            {"code": "Option B", "title": "Kerja Sama Pemanfaatan Pihak Ketiga (KSP Penuh)", "risk": "Proses tender lama (min. 6 bulan)", "benefit": "Pendapatan sewa tetap"},
+            {"code": "Option C", "title": "Status Quo (Pengelolaan internal per OPD)", "risk": "Gedung terus idle dan biaya rawat tetap keluar", "benefit": "Tidak perlu regulasi baru"},
+        ],
+        expert_recommendation="Staf Ahli merekomendasikan Opsi A: Walikota menerbitkan Perwal insentif pemanfaatan bersama fasilitas publik dengan target evaluasi 6 bulan.",
+        decision_owner="Wali Kota Tangerang Selatan",
+        deadline=now + timedelta(days=10),
+        inaction_impact="Potensi kerugian idle asset berlanjut dan memicu persepsi negatif masyarakat terhadap gedung pemerintah yang terbengkalai.",
+        status="Menunggu Disposisi",
+        disposition_notes=None,
+    )
+    db.add(dec1)
+
+    # 14. Audit Log
+    audit1 = NetworkAuditLog(
+        region_id=kota_tangsel.id,
+        user_name="Drs. H. Heru Sudarmanto, M.Si",
+        user_role="Staf Ahli Kepala Daerah",
+        action="SUBMIT_DIAGNOSIS",
+        details="Mengajukan lembar diagnosis kemandirian fiskal dan usulan Decision Required penetapan Perwal Aset.",
+        ip_address="182.253.112.44",
+    )
+    db.add(audit1)
 
     db.commit()

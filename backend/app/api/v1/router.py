@@ -15,6 +15,7 @@ from app.api.v1.endpoints import (
     reports,
     talent,
     urban,
+    network,
 )
 
 api_router = APIRouter()
@@ -32,3 +33,4 @@ api_router.include_router(decision.router, prefix="/decisions", tags=["decisions
 api_router.include_router(data_ingestion.router, prefix="/data", tags=["data"])
 api_router.include_router(urban.router, prefix="/urban", tags=["ruang-kota"])
 api_router.include_router(talent.router, prefix="/talent", tags=["talenta-asn"])
+api_router.include_router(network.router, prefix="/network", tags=["jejaring-staf-ahli"])

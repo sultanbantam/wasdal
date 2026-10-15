@@ -343,3 +343,144 @@ export function getTalentImplementation() {
   return request<any[]>("/talent/implementation");
 }
 
+// ==========================================
+// JEJARING STAF AHLI CLIENT API
+// ==========================================
+export function getNetworkOverview() {
+  return request<any>("/network/overview");
+}
+
+export function getNetworkRegions(region_type?: string, province?: string) {
+  const params = new URLSearchParams();
+  if (region_type) params.append("region_type", region_type);
+  if (province) params.append("province", province);
+  const q = params.toString();
+  return request<any[]>(q ? `/network/regions?${q}` : "/network/regions");
+}
+
+export function getRegionDetail(region_id: string) {
+  return request<any>(`/network/regions/${region_id}`);
+}
+
+export function updateRegionProfile(region_id: string, payload: any) {
+  return request<any>(`/network/regions/${region_id}/profile`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getNetworkIndicators(region_id?: string, category?: string, year?: number) {
+  const params = new URLSearchParams();
+  if (region_id) params.append("region_id", region_id);
+  if (category) params.append("category", category);
+  if (year) params.append("year", year.toString());
+  const q = params.toString();
+  return request<any>(q ? `/network/indicators?${q}` : "/network/indicators");
+}
+
+export async function importNetworkIndicators(region_id: string, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(`${API_URL}/network/indicators/import?region_id=${encodeURIComponent(region_id)}`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Gagal impor indikator (${res.status}): ${errorText}`);
+  }
+  return res.json();
+}
+
+export function getNetworkIssues(region_id?: string, category?: string, urgency?: string, status?: string) {
+  const params = new URLSearchParams();
+  if (region_id) params.append("region_id", region_id);
+  if (category) params.append("category", category);
+  if (urgency) params.append("urgency", urgency);
+  if (status) params.append("status", status);
+  const q = params.toString();
+  return request<any[]>(q ? `/network/issues?${q}` : "/network/issues");
+}
+
+export function createNetworkIssue(payload: any) {
+  return request<any>("/network/issues", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getNetworkDiagnoses(region_id?: string) {
+  const q = region_id ? `?region_id=${encodeURIComponent(region_id)}` : "";
+  return request<any[]>(`/network/diagnoses${q}`);
+}
+
+export function createNetworkDiagnosis(payload: any) {
+  return request<any>("/network/diagnoses", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getNetworkFiscal(region_id: string, year?: number) {
+  const q = year ? `?region_id=${encodeURIComponent(region_id)}&year=${year}` : `?region_id=${encodeURIComponent(region_id)}`;
+  return request<any>(`/network/fiscal${q}`);
+}
+
+export function getNetworkIdeas(region_id?: string, category?: string, status?: string) {
+  const params = new URLSearchParams();
+  if (region_id) params.append("region_id", region_id);
+  if (category) params.append("category", category);
+  if (status) params.append("status", status);
+  const q = params.toString();
+  return request<any[]>(q ? `/network/ideas?${q}` : "/network/ideas");
+}
+
+export function createNetworkIdea(payload: any) {
+  return request<any>("/network/ideas", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function expressNetworkIdeaInterest(idea_id: string) {
+  return request<any>(`/network/ideas/${idea_id}/interest`, {
+    method: "POST",
+  });
+}
+
+export function getNetworkPilots(region_id?: string) {
+  const q = region_id ? `?region_id=${encodeURIComponent(region_id)}` : "";
+  return request<any[]>(`/network/pilots${q}`);
+}
+
+export function getNetworkAssets(region_id?: string) {
+  const q = region_id ? `?region_id=${encodeURIComponent(region_id)}` : "";
+  return request<any[]>(`/network/assets${q}`);
+}
+
+export function getNetworkFGD() {
+  return request<any>("/network/fgd");
+}
+
+export function getNetworkDecisions(region_id?: string, status?: string) {
+  const params = new URLSearchParams();
+  if (region_id) params.append("region_id", region_id);
+  if (status) params.append("status", status);
+  const q = params.toString();
+  return request<any[]>(q ? `/network/decisions?${q}` : "/network/decisions");
+}
+
+export function submitNetworkDisposition(decision_id: string, payload: any) {
+  return request<any>(`/network/decisions/${decision_id}/disposition`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function askNetworkAIAssist(payload: any) {
+  return request<any>("/network/ai/assist", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
