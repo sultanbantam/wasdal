@@ -25,10 +25,22 @@ export default function NetworkHomePage() {
   const [activeTab, setActiveTab] = useState<"daerah" | "nasional">("daerah");
   const [overview, setOverview] = useState<any>(null);
   const [regions, setRegions] = useState<any[]>([]);
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("wasdal_team_members");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            setTeamMembers(parsed);
+          }
+        }
+      } catch (e) {}
+    }
   }, []);
 
   const loadData = async () => {
@@ -348,32 +360,55 @@ export default function NetworkHomePage() {
 
               {/* Status Tim Daerah */}
               <Panel>
-                <h4 className="font-bold text-xs uppercase tracking-wider text-slate-400 mb-3">
-                  Tim Staf Ahli Daerah Terdaftar
-                </h4>
-                <div className="space-y-2 text-xs">
-                  <div className="flex items-center justify-between p-2 rounded bg-slate-50 dark:bg-slate-900">
-                    <div>
-                      <div className="font-semibold">Drs. H. Heru Sudarmanto, M.Si</div>
-                      <div className="text-[11px] text-slate-500">Staf Ahli Bidang Ekbang</div>
-                    </div>
-                    <Badge className="bg-emerald-100 text-emerald-800 text-[10px]">Aktif</Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-2 rounded bg-slate-50 dark:bg-slate-900">
-                    <div>
-                      <div className="font-semibold">Ahmad Fauzi, S.Kom</div>
-                      <div className="text-[11px] text-slate-500">Admin Daerah / PIC Data</div>
-                    </div>
-                    <Badge className="bg-emerald-100 text-emerald-800 text-[10px]">Aktif</Badge>
-                  </div>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-slate-400">
+                    Tim Staf Ahli Daerah Terdaftar
+                  </h4>
+                  {teamMembers.length > 0 && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
+                      {teamMembers.length} Personel
+                    </span>
+                  )}
                 </div>
-                <div className="mt-3">
-                  <Link href="/network/team">
-                    <Button variant="ghost" className="w-full text-xs h-7 text-slate-500 hover:text-indigo-600">
-                      Kelola Anggota Tim &rarr;
-                    </Button>
-                  </Link>
-                </div>
+
+                {teamMembers.length > 0 ? (
+                  <div className="space-y-2 text-xs">
+                    {teamMembers.map((m: any, idx: number) => (
+                      <div
+                        key={m.id || idx}
+                        className="flex items-center justify-between p-2 rounded bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800"
+                      >
+                        <div>
+                          <div className="font-semibold text-slate-900 dark:text-white">{m.user_name || m.name}</div>
+                          <div className="text-[11px] text-slate-500">{m.role || m.agency || "Staf Ahli"}</div>
+                        </div>
+                        <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px]">
+                          {m.status || "Aktif"}
+                        </Badge>
+                      </div>
+                    ))}
+                    <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <Link href="/network/team">
+                        <Button variant="ghost" className="w-full text-xs h-7 text-slate-500 hover:text-indigo-600">
+                          Kelola Anggota Tim &rarr;
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-4 text-center">
+                    <Users2 size={24} className="mx-auto mb-1.5 text-slate-300 dark:text-slate-600" />
+                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Belum Ada Tim Terdaftar</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5 mb-3">
+                      Data anggota tim akan muncul otomatis di sini setelah diisi.
+                    </p>
+                    <Link href="/network/team">
+                      <Button variant="secondary" className="text-xs h-7.5 px-3 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40">
+                        + Tambah Anggota Tim
+                      </Button>
+                    </Link>
+                  </div>
+                )}
               </Panel>
             </div>
           </div>

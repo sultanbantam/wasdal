@@ -8,6 +8,7 @@ import {
   Building,
   Shield,
   CheckCircle2,
+  Trash2,
 } from "lucide-react";
 import { getRegionDetail, getNetworkRegions } from "@/lib/api";
 import { Badge, Button, Panel } from "@/components/ui";
@@ -22,6 +23,19 @@ export default function RegionalTeamPage() {
   const [successMsg, setSuccessMsg] = useState("");
 
   useEffect(() => {
+    // Check localStorage first
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("wasdal_team_members");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setTeamMembers(parsed);
+            return;
+          }
+        }
+      } catch (e) {}
+    }
     loadTeam();
   }, []);
 
@@ -31,7 +45,14 @@ export default function RegionalTeamPage() {
       const tangsel = regions.find((r: any) => r.code?.includes("36.74")) || regions[0];
       if (tangsel) {
         const detail = await getRegionDetail(tangsel.id);
-        setTeamMembers(detail?.team_members || []);
+        if (detail?.team_members && detail.team_members.length > 0) {
+          setTeamMembers(detail.team_members);
+          if (typeof window !== "undefined") {
+            try {
+              localStorage.setItem("wasdal_team_members", JSON.stringify(detail.team_members));
+            } catch (e) {}
+          }
+        }
       }
     } catch (err) {
       console.error(err);
@@ -49,15 +70,34 @@ export default function RegionalTeamPage() {
       user_name: name,
       user_email: email,
       role,
-      agency,
+      agency: agency || "Sekretariat Daerah",
       is_active: true,
+      status: "Aktif",
     };
-    setTeamMembers((prev) => [...prev, newMember]);
+    const updated = [...teamMembers, newMember];
+    setTeamMembers(updated);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("wasdal_team_members", JSON.stringify(updated));
+      } catch (e) {}
+    }
     setIsInviteOpen(false);
     setName("");
     setEmail("");
-    setSuccessMsg(`Undangan keanggotaan untuk ${name} (${role}) berhasil dikirimkan.`);
+    setSuccessMsg(`Anggota tim ${name} (${role}) berhasil didaftarkan.`);
     setTimeout(() => setSuccessMsg(""), 4000);
+  };
+
+  const handleDeleteMember = (id: string) => {
+    const updated = teamMembers.filter((m) => m.id !== id);
+    setTeamMembers(updated);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("wasdal_team_members", JSON.stringify(updated));
+      } catch (e) {}
+    }
+    setSuccessMsg("Anggota tim berhasil dihapus.");
+    setTimeout(() => setSuccessMsg(""), 3000);
   };
 
   return (
@@ -78,7 +118,7 @@ export default function RegionalTeamPage() {
 
         <Button
           onClick={() => setIsInviteOpen(!isInviteOpen)}
-          className="text-xs h-8 bg-indigo-600 hover:bg-indigo-500 flex items-center gap-1.5"
+          className="text-xs h-8 bg-indigo-600 hover:bg-indigo-500 flex items-center gap-1.5 shadow-sm"
         >
           <UserPlus size={14} />
           <span>Tambah Anggota Tim</span>
@@ -95,7 +135,7 @@ export default function RegionalTeamPage() {
       {/* Invite Form */}
       {isInviteOpen && (
         <Panel className="border-indigo-300 dark:border-indigo-800 shadow-lg">
-          <h3 className="font-bold text-sm mb-3">Undang Anggota Tim Daerah Baru</h3>
+          <h3 className="font-bold text-sm mb-3">Daftarkan Anggota Tim Daerah Baru</h3>
           <form onSubmit={handleInvite} className="space-y-3 text-xs">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -104,7 +144,7 @@ export default function RegionalTeamPage() {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full p-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                  className="w-full p-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   placeholder="misal: Dr. Ir. H. Mulyadi, M.M."
                   required
                 />
@@ -116,7 +156,7 @@ export default function RegionalTeamPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full p-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                  className="w-full p-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   placeholder="stafahli@tangselkota.go.id"
                   required
                 />
@@ -127,7 +167,7 @@ export default function RegionalTeamPage() {
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="w-full p-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                  className="w-full p-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 >
                   <option value="Staf Ahli Kepala Daerah">Staf Ahli Kepala Daerah</option>
                   <option value="Admin Daerah">Admin Daerah</option>
@@ -142,7 +182,7 @@ export default function RegionalTeamPage() {
                   type="text"
                   value={agency}
                   onChange={(e) => setAgency(e.target.value)}
-                  className="w-full p-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                  className="w-full p-2 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   placeholder="Sekretariat Daerah / Bapenda / Bappeda"
                 />
               </div>
@@ -153,7 +193,7 @@ export default function RegionalTeamPage() {
                 Batal
               </Button>
               <Button type="submit" variant="primary" className="bg-indigo-600 hover:bg-indigo-500">
-                Kirim Undangan Akses
+                Simpan & Daftarkan
               </Button>
             </div>
           </form>
@@ -162,32 +202,55 @@ export default function RegionalTeamPage() {
 
       {/* Team Members List */}
       <Panel>
-        <h3 className="font-bold text-sm mb-3">Daftar Anggota Tim Daerah Terverifikasi</h3>
-        <div className="divide-y divide-slate-100 dark:divide-slate-800">
-          {teamMembers.map((m) => (
-            <div key={m.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-sm text-slate-900 dark:text-white">{m.user_name}</span>
-                  <Badge className="bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 text-[10px]">
-                    {m.role}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-3 text-slate-500 text-[11px]">
-                  <span className="flex items-center gap-1">
-                    <Mail size={12} />
-                    {m.user_email}
-                  </span>
-                  <span>Unit: {m.agency || "Sekretariat Daerah"}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Badge className="bg-emerald-100 text-emerald-800 text-[10px]">Aktif</Badge>
-              </div>
-            </div>
-          ))}
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold text-sm">Daftar Anggota Tim Daerah Terdaftar</h3>
+          <span className="text-xs text-slate-500">{teamMembers.length} Personel Terdaftar</span>
         </div>
+
+        {teamMembers.length > 0 ? (
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            {teamMembers.map((m) => (
+              <div key={m.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm text-slate-900 dark:text-white">{m.user_name}</span>
+                    <Badge className="bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 text-[10px]">
+                      {m.role}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-3 text-slate-500 text-[11px]">
+                    <span className="flex items-center gap-1">
+                      <Mail size={12} />
+                      {m.user_email}
+                    </span>
+                    <span>Unit: {m.agency || "Sekretariat Daerah"}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px]">
+                    {m.status || "Aktif"}
+                  </Badge>
+                  <button
+                    onClick={() => handleDeleteMember(m.id)}
+                    className="p-1 rounded text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs transition"
+                    title="Hapus Anggota"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="py-8 text-center text-xs text-slate-500">
+            <UserCog size={32} className="mx-auto mb-2 text-slate-300 dark:text-slate-600" />
+            <p className="font-semibold text-slate-700 dark:text-slate-300">Belum Ada Anggota Tim Terdaftar</p>
+            <p className="text-slate-400 mt-1 max-w-sm mx-auto">
+              Silakan klik tombol <strong>&quot;Tambah Anggota Tim&quot;</strong> di atas untuk mendaftarkan personel Staf Ahli, Admin Daerah, atau Kontributor OPD.
+            </p>
+          </div>
+        )}
       </Panel>
     </div>
   );
