@@ -543,6 +543,7 @@ function IntakeView() {
   
   const [isRecording, setIsRecording] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [audioNotice, setAudioNotice] = useState("");
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<BlobPart[]>([]);
 
@@ -591,11 +592,14 @@ function IntakeView() {
 
   const uploadToTranscribe = async (fileOrBlob: Blob | File, filename: string) => {
     setIsUploading(true);
+    setAudioNotice("");
     try {
       const data = await transcribeAudio(fileOrBlob, filename);
-      setRawText((prev) => prev + (prev ? " " : "") + data.text);
-    } catch (err) {
-      alert("Terjadi kesalahan: " + (err instanceof Error ? err.message : String(err)));
+      if (data.offline) {
+        setAudioNotice(data.message || "Transkripsi otomatis belum tersedia.");
+      } else {
+        setRawText((prev) => prev + (prev ? " " : "") + data.text);
+      }
     } finally {
       setIsUploading(false);
     }
@@ -675,6 +679,11 @@ function IntakeView() {
             >
               ×
             </button>
+          </div>
+        )}
+        {audioNotice && (
+          <div className="mt-3 rounded-md border border-warning/30 bg-warning/10 p-3 text-xs leading-5 text-warning">
+            {audioNotice}
           </div>
         )}
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -775,6 +784,7 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgressMsg, setUploadProgressMsg] = useState("");
   const [backupAudio, setBackupAudio] = useState<{ url: string; filename: string; sizeMb: string } | null>(null);
+  const [audioNotice, setAudioNotice] = useState("");
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<BlobPart[]>([]);
@@ -859,12 +869,15 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
 
   const uploadToTranscribe = async (fileOrBlob: Blob | File, filename: string) => {
     setIsUploading(true);
+    setAudioNotice("");
     setUploadProgressMsg("Memproses & mentranskripsikan audio rapat via AI (Otomatis kompresi & segmentasi untuk durasi panjang)...");
     try {
       const data = await transcribeAudio(fileOrBlob, filename);
-      setTranscriptText((prev) => prev + (prev ? "\n\n" : "") + data.text);
-    } catch (err) {
-      alert("Terjadi kesalahan: " + (err instanceof Error ? err.message : String(err)));
+      if (data.offline) {
+        setAudioNotice(data.message || "Transkripsi otomatis belum tersedia.");
+      } else {
+        setTranscriptText((prev) => prev + (prev ? "\n\n" : "") + data.text);
+      }
     } finally {
       setIsUploading(false);
       setUploadProgressMsg("");
@@ -1000,6 +1013,11 @@ function MeetingView({ cases }: { cases: CaseItem[] }) {
                 <div className="mt-3 p-3 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary flex items-center gap-2.5 animate-pulse">
                   <RefreshCw size={15} className="animate-spin shrink-0" />
                   <span>{uploadProgressMsg || "Sedang memproses & mentranskripsikan audio rapat..."}</span>
+                </div>
+              )}
+              {audioNotice && (
+                <div className="mt-3 rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs leading-5 text-warning">
+                  {audioNotice}
                 </div>
               )}
               

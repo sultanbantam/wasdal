@@ -124,34 +124,39 @@ export async function syncLapor() {
   return res.json();
 }
 
-export async function transcribeAudio(fileOrBlob: Blob | File, filename: string): Promise<{ text: string }> {
+export type TranscriptionResult = {
+  text: string;
+  offline?: boolean;
+  message?: string;
+};
+
+export async function transcribeAudio(fileOrBlob: Blob | File, filename: string): Promise<TranscriptionResult> {
   const formData = new FormData();
   formData.append("file", fileOrBlob, filename);
+  try {
+    const res = await fetch(`${API_URL}/meetings/transcribe`, {
+      method: "POST",
+      body: formData
+    });
 
-  const res = await fetch(`${API_URL}/meetings/transcribe`, {
-    method: "POST",
-    body: formData
-  });
+    if (res.ok) return res.json();
 
-  if (!res.ok) {
-    const errorText = await res.text().catch(() => "Unknown error");
-    let cleanMessage = errorText;
-    try {
-      const parsed = JSON.parse(errorText);
-      if (parsed.detail) {
-        const detailStr = typeof parsed.detail === "string" ? parsed.detail : JSON.stringify(parsed.detail);
-        if (detailStr.includes("insufficient_quota") || detailStr.includes("credit_balance_exhausted") || detailStr.includes("429")) {
-          cleanMessage = "Kuota / Saldo kredit OpenAI API di server telah habis (Error 429 - Insufficient Quota). Silakan lakukan top-up saldo OpenAI di platform.openai.com atau ketik / tempel transkrip rapat langsung pada kolom teks di bawah.";
-        } else {
-          cleanMessage = detailStr;
-        }
-      }
-    } catch {
-      // ignore JSON parse error
-    }
-    throw new Error(cleanMessage);
+    const errorText = await res.text().catch(() => "");
+    const quotaExhausted = /insufficient_quota|credit_balance_exhausted|429/i.test(errorText);
+    return {
+      text: "",
+      offline: true,
+      message: quotaExhausted
+        ? "Transkripsi otomatis belum tersedia karena kuota AI di server habis. Tempelkan transkrip atau catatan rapat untuk melanjutkan."
+        : "Transkripsi otomatis belum tersedia. Tempelkan transkrip atau catatan rapat untuk melanjutkan."
+    };
+  } catch {
+    return {
+      text: "",
+      offline: true,
+      message: "Backend transkripsi belum dapat dihubungi. Tempelkan transkrip atau catatan rapat untuk melanjutkan."
+    };
   }
-  return res.json();
 }
 
 // ==========================================
