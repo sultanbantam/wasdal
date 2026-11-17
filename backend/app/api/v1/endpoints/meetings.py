@@ -3,6 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 import tempfile
 import os
+import logging
 from openai import OpenAI
 
 from app.db.session import get_db
@@ -11,6 +12,7 @@ from app.core.config import get_settings
 from app.services.audio_processor import process_document_or_audio
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 @router.post("/transcribe")
 async def transcribe_audio(file: UploadFile = File(...)) -> dict:
@@ -34,6 +36,7 @@ async def transcribe_audio(file: UploadFile = File(...)) -> dict:
         text = process_document_or_audio(tmp_path, suffix, client)
         return {"text": text}
     except Exception as e:
+        logger.exception("Meeting transcription failed for uploaded file: %s", file.filename or "unnamed-file")
         err_msg = str(e)
         if "insufficient_quota" in err_msg or "credit_balance_exhausted" in err_msg or "429" in err_msg:
             raise HTTPException(
