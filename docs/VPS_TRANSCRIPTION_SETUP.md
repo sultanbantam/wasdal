@@ -51,6 +51,8 @@ curl -i http://127.0.0.1:8001/api/v1/health
 
 Hasil health check harus memuat `"status":"ok"`.
 
+Port backend dipetakan ke `127.0.0.1:8001` saja. Akses publik dilakukan melalui Nginx dan HTTPS, bukan langsung ke port 8001.
+
 ## 4. Pasang Nginx dan HTTPS
 
 ```bash
