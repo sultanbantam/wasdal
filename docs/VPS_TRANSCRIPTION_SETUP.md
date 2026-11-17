@@ -6,7 +6,7 @@ Frontend Vercel mengirim rekaman ke:
 https://api-wasdal.bamboochain.id/api/v1/meetings/transcribe
 ```
 
-Domain tersebut harus mengarah ke VPS Contabo dan Nginx meneruskannya ke container backend Wasdal di port lokal `8001`.
+Domain tersebut harus mengarah ke VPS Contabo dan Nginx Proxy Manager meneruskannya ke container backend Wasdal di gateway Docker port `8001`.
 
 ## 1. Buat DNS Record
 
@@ -51,7 +51,7 @@ curl -i http://127.0.0.1:8001/api/v1/health
 
 Hasil health check harus memuat `"status":"ok"`.
 
-Port backend dipetakan ke `127.0.0.1:8001` saja. Akses publik dilakukan melalui Nginx dan HTTPS, bukan langsung ke port 8001.
+Jika memakai Nginx Proxy Manager dalam container terpisah, arahkan proxy host ke `http://172.17.0.1:8001`. Port backend hanya diikat ke gateway Docker tersebut, sehingga dapat dijangkau Nginx Proxy Manager tanpa membuka API mentah ke internet.
 
 ## 4. Pasang Nginx dan HTTPS
 
@@ -91,5 +91,5 @@ Interpretasi umum:
 
 - `OpenAI API Key is not configured`: isi `OPENAI_API_KEY` di `.env`, lalu restart `docker compose up -d backend`.
 - `429` atau `insufficient_quota`: API key benar, tetapi kredit OpenAI habis.
-- `502 Bad Gateway`: backend belum hidup atau Nginx tidak dapat mengakses `127.0.0.1:8001`.
+- `502 Bad Gateway`: backend belum hidup atau Nginx Proxy Manager tidak dapat mengakses `172.17.0.1:8001`.
 - Domain tidak resolve: record DNS belum benar atau belum propagasi.
