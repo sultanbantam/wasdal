@@ -46,12 +46,14 @@ Jika memakai domain Vercel lain, tambahkan dengan pemisah koma pada `CORS_ORIGIN
 git pull origin main
 docker compose up --build -d postgres redis minio createbuckets backend worker
 docker compose ps
-curl -i http://127.0.0.1:8001/api/v1/health
+curl -i http://172.17.0.1:8001/api/v1/health
 ```
 
 Hasil health check harus memuat `"status":"ok"`.
 
 Jika memakai Nginx Proxy Manager dalam container terpisah, arahkan proxy host ke `http://172.17.0.1:8001`. Port backend hanya diikat ke gateway Docker tersebut, sehingga dapat dijangkau Nginx Proxy Manager tanpa membuka API mentah ke internet.
+
+MinIO tidak mempublikasikan port `9000` atau `9001` ke host VPS. Backend mengakses MinIO melalui jaringan internal Docker (`minio:9000`), sehingga tidak bentrok dengan layanan MinIO lain di VPS.
 
 ## 4. Pasang Nginx dan HTTPS
 

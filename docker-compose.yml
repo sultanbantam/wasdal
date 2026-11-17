@@ -24,9 +24,6 @@ services:
     environment:
       MINIO_ROOT_USER: wasdal
       MINIO_ROOT_PASSWORD: wasdal-secret
-    ports:
-      - "9000:9000"
-      - "9001:9001"
     volumes:
       - minio-data:/data
 
